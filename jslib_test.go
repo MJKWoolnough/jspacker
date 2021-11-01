@@ -1,4 +1,4 @@
-package jslib
+package jspacker
 
 import (
 	"fmt"

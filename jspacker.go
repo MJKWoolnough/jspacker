@@ -1,5 +1,5 @@
-// Package jslib is a javascript packer and library for javascript projects
-package jslib
+// Package jspacker is a javascript packer and library for javascript projects
+package jspacker
 
 import (
 	"errors"

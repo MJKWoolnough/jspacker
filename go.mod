@@ -1,4 +1,4 @@
-module vimagination.zapto.org/jslib
+module vimagination.zapto.org/jspacker
 
 go 1.16
 

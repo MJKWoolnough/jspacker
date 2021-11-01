@@ -9,7 +9,7 @@ import (
 	"sort"
 
 	"vimagination.zapto.org/javascript"
-	"vimagination.zapto.org/jslib"
+	"vimagination.zapto.org/jspacker"
 	"vimagination.zapto.org/parser"
 )
 
@@ -72,22 +72,22 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("error parsing javascript module: %w", err)
 		}
-		if s, err = jslib.Plugin(m, filesTodo[0]); err != nil {
+		if s, err = jspacker.Plugin(m, filesTodo[0]); err != nil {
 			return fmt.Errorf("error processing javascript plugin: %w", err)
 		}
 	} else {
-		args := make([]jslib.Option, 1, len(filesTodo)+3)
-		args[0] = jslib.ParseDynamic
+		args := make([]jspacker.Option, 1, len(filesTodo)+3)
+		args[0] = jspacker.ParseDynamic
 		if base != "" {
-			args = append(args, jslib.Loader(jslib.OSLoad(base)))
+			args = append(args, jspacker.Loader(jspacker.OSLoad(base)))
 		}
 		if noExports {
-			args = append(args, jslib.NoExports)
+			args = append(args, jspacker.NoExports)
 		}
 		for _, f := range filesTodo {
-			args = append(args, jslib.File(f))
+			args = append(args, jspacker.File(f))
 		}
-		s, err = jslib.Package(args...)
+		s, err = jspacker.Package(args...)
 		if err != nil {
 			return fmt.Errorf("error generating output: %w", err)
 		}

@@ -1,4 +1,4 @@
-package jslib
+package jspacker
 
 import "vimagination.zapto.org/javascript"
 
