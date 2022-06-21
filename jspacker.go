@@ -158,6 +158,7 @@ func Plugin(m *javascript.Module, url string) (*javascript.Script, error) {
 		importURLs           = make(map[string]string)
 		importBindings       = make(importBindingMap)
 		importObjectBindings []javascript.BindingElement
+		importURLsArrayE     []javascript.ArrayElement
 		importURLsArray      []javascript.AssignmentExpression
 		statementList        = make([]javascript.StatementListItem, 1, len(m.ModuleListItems))
 		d                    = dependency{
@@ -179,10 +180,14 @@ func Plugin(m *javascript.Module, url string) (*javascript.Script, error) {
 				imports++
 				ib = id2String(imports)
 				importURLs[iurl] = ib
-				importURLsArray = append(importURLsArray, javascript.AssignmentExpression{
+				ae := javascript.AssignmentExpression{
 					ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
 						Literal: jToken(strconv.Quote(iurl)),
 					}),
+				}
+				importURLsArray = append(importURLsArray, ae)
+				importURLsArrayE = append(importURLsArrayE, javascript.ArrayElement{
+					AssignmentExpression: ae,
 				})
 				importObjectBindings = append(importObjectBindings, javascript.BindingElement{
 					SingleNameBinding: jToken(ib),
@@ -331,7 +336,7 @@ func Plugin(m *javascript.Module, url string) (*javascript.Script, error) {
 																	MemberExpression: &javascript.MemberExpression{
 																		PrimaryExpression: &javascript.PrimaryExpression{
 																			ArrayLiteral: &javascript.ArrayLiteral{
-																				ElementList: importURLsArray,
+																				ElementList: importURLsArrayE,
 																			},
 																		},
 																	},
