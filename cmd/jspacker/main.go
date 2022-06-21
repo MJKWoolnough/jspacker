@@ -40,7 +40,7 @@ func run() error {
 	)
 
 	flag.Var(&filesTodo, "i", "input file")
-	flag.StringVar(&output, "o", "-", "input file")
+	flag.StringVar(&output, "o", "-", "output file")
 	flag.StringVar(&base, "b", "", "js base dir")
 	flag.BoolVar(&plugin, "p", false, "export file(s) as plugin(s)")
 	flag.BoolVar(&noExports, "n", false, "no exports")
