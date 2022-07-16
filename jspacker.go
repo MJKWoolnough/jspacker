@@ -22,7 +22,6 @@ type config struct {
 	loader        func(string) (*javascript.Module, error)
 	bare          bool
 	parseDynamic  bool
-	currURL       string
 	nextID        uint
 	exportAllFrom [][2]*dependency
 	statementList []javascript.StatementListItem
