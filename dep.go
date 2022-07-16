@@ -382,7 +382,7 @@ func (d *dependency) setExportBinding(binding string, e *dependency, exportedBin
 }
 
 func isConditionalExpression(ae *javascript.AssignmentExpression) bool {
-	return ae != nil && ae.ConditionalExpression != nil && ae.Yield == false && ae.Delegate == false && (ae.AssignmentOperator == javascript.AssignmentNone || ae.AssignmentOperator == javascript.AssignmentAssign)
+	return ae != nil && ae.ConditionalExpression != nil && !ae.Yield && !ae.Delegate && (ae.AssignmentOperator == javascript.AssignmentNone || ae.AssignmentOperator == javascript.AssignmentAssign)
 }
 
 func (d *dependency) processArrayBinding(binding *javascript.ArrayBindingPattern) {
