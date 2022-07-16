@@ -13,15 +13,6 @@ func jToken(data string) *javascript.Token {
 	return &javascript.Token{Token: parser.Token{Data: data}}
 }
 
-type export struct {
-	binding, module string
-	writeable       bool
-}
-
-type exportMap map[string]export
-
-type exportsMap map[string]exportMap
-
 func (c *config) makeLoader() error {
 	promise := &javascript.MemberExpression{
 		PrimaryExpression: &javascript.PrimaryExpression{
