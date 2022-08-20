@@ -75,7 +75,7 @@ func Package(opts ...Option) (*javascript.Script, error) {
 	if c.loader == nil {
 		base, err := os.Getwd()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error getting current working directory: %w", err)
 		}
 		c.loader = OSLoad(base)
 	}
