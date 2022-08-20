@@ -2,7 +2,6 @@
 package jspacker
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -384,9 +383,3 @@ func (i importBindingMap) Handle(t javascript.Type) error {
 	}
 	return walk.Walk(t, i)
 }
-
-// Errors
-var (
-	ErrNoFiles    = errors.New("no files")
-	ErrInvalidURL = errors.New("added files must be absolute URLs")
-)

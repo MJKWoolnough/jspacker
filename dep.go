@@ -1,7 +1,6 @@
 package jspacker
 
 import (
-	"errors"
 	"fmt"
 	"path"
 	"strconv"
@@ -470,6 +469,3 @@ func (d *dependency) processBindings(s *scope.Scope) {
 		d.processBindings(cs)
 	}
 }
-
-// Errors
-var ErrInvalidExport = errors.New("invalid export")
