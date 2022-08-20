@@ -8,15 +8,9 @@ Package jspacker is a javascript packer and library for javascript projects
 
 ```go
 var (
-	ErrNoFiles    = errors.New("no files")
-	ErrInvalidURL = errors.New("added files must be absolute URLs")
-)
-```
-Errors
-
-```go
-var (
 	ErrInvalidExport = errors.New("invalid export")
+	ErrNoFiles       = errors.New("no files")
+	ErrInvalidURL    = errors.New("added files must be absolute URLs")
 )
 ```
 Errors
