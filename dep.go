@@ -472,6 +472,4 @@ func (d *dependency) processBindings(s *scope.Scope) {
 }
 
 // Errors
-var (
-	ErrInvalidExport = errors.New("invalid export")
-)
+var ErrInvalidExport = errors.New("invalid export")
