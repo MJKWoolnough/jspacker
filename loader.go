@@ -120,7 +120,7 @@ func (c *config) makeLoader() error {
 				} else {
 					b := d.resolveExport(prop)
 					if b == nil {
-						return fmt.Errorf("error resolving export (%s): %w", d.url, ErrInvalidExport)
+						return fmt.Errorf("error resolving export %s (%s): %w", prop, d.url, ErrInvalidExport)
 					}
 					ael = []javascript.ArrayElement{
 						propName,
