@@ -108,7 +108,7 @@ func Package(opts ...Option) (*javascript.Script, error) {
 	}
 	for _, url := range c.filesToDo {
 		if !strings.HasPrefix(url, "/") {
-			return nil, ErrInvalidURL
+			return nil, fmt.Errorf("%w: %s", ErrInvalidURL, url)
 		}
 		if _, err := c.dependency.addImport(c.dependency.RelTo(url)); err != nil {
 			return nil, err
