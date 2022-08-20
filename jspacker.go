@@ -50,7 +50,7 @@ func OSLoad(base string) func(string) (*javascript.Module, error) {
 				}
 			}
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("error opening file: %w", err)
 			}
 		}
 		m, err := javascript.ParseModule(parser.NewReaderTokeniser(f))
