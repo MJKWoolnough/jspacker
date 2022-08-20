@@ -448,7 +448,7 @@ func (d *dependency) resolveImports() error {
 		}
 		b := binding.dependency.resolveExport(binding.binding)
 		if b == nil {
-			return fmt.Errorf("error resolving import (%s): %w", d.url, ErrInvalidExport)
+			return fmt.Errorf("error resolving import %s (%s): %w", name, d.url, ErrInvalidExport)
 		}
 		for _, c := range d.scope.Bindings[name] {
 			c.Data = b.Data
