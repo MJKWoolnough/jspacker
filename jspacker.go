@@ -1,4 +1,4 @@
-// Package jspacker is a javascript packer and library for javascript projects
+// Package jspacker is a javascript packer for javascript projects
 package jspacker
 
 import (
