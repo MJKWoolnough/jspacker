@@ -418,7 +418,6 @@ func (c *config) makeLoader() error {
 			},
 		}
 	}
-	successFn := jToken("successFn")
 	globalThis := &javascript.PrimaryExpression{
 		IdentifierReference: jToken("globalThis"),
 	}
@@ -440,96 +439,6 @@ func (c *config) makeLoader() error {
 									{
 										ConditionalExpression: javascript.WrapConditional(&javascript.ObjectLiteral{
 											PropertyDefinitionList: []javascript.PropertyDefinition{
-												{
-													PropertyName: &javascript.PropertyName{
-														LiteralPropertyName: jToken("pageLoad"),
-													},
-													AssignmentExpression: &javascript.AssignmentExpression{
-														ConditionalExpression: javascript.WrapConditional(&javascript.ObjectLiteral{
-															PropertyDefinitionList: []javascript.PropertyDefinition{
-																{
-																	PropertyName: value,
-																	AssignmentExpression: &javascript.AssignmentExpression{
-																		ConditionalExpression: &javascript.ConditionalExpression{
-																			LogicalORExpression: javascript.WrapConditional(&javascript.EqualityExpression{
-																				EqualityExpression: &javascript.WrapConditional(javascript.MemberExpression{
-																					MemberExpression: &javascript.MemberExpression{
-																						PrimaryExpression: &javascript.PrimaryExpression{
-																							IdentifierReference: jToken("document"),
-																						},
-																					},
-																					IdentifierName: jToken("readyState"),
-																				}).LogicalORExpression.LogicalANDExpression.BitwiseORExpression.BitwiseXORExpression.BitwiseANDExpression.EqualityExpression,
-																				EqualityOperator: javascript.EqualityEqual,
-																				RelationalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																					Literal: jToken("\"complete\""),
-																				}).LogicalORExpression.LogicalANDExpression.BitwiseORExpression.BitwiseXORExpression.BitwiseANDExpression.EqualityExpression.RelationalExpression,
-																			}).LogicalORExpression,
-																			True: &javascript.AssignmentExpression{
-																				ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
-																					MemberExpression: promiseResolve,
-																					Arguments:        &javascript.Arguments{},
-																				}),
-																			},
-																			False: &javascript.AssignmentExpression{
-																				ConditionalExpression: javascript.WrapConditional(&javascript.NewExpression{
-																					MemberExpression: javascript.MemberExpression{
-																						MemberExpression: promise,
-																						Arguments: &javascript.Arguments{
-																							ArgumentList: []javascript.AssignmentExpression{
-																								{
-																									ArrowFunction: &javascript.ArrowFunction{
-																										BindingIdentifier: successFn,
-																										AssignmentExpression: &javascript.AssignmentExpression{
-																											ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
-																												MemberExpression: &javascript.MemberExpression{
-																													MemberExpression: &javascript.MemberExpression{
-																														PrimaryExpression: globalThis,
-																													},
-																													IdentifierName: jToken("addEventListener"),
-																												},
-																												Arguments: &javascript.Arguments{
-																													ArgumentList: []javascript.AssignmentExpression{
-																														{
-																															ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																																Literal: jToken("\"load\""),
-																															}),
-																														},
-																														{
-																															ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																																IdentifierReference: successFn,
-																															}),
-																														},
-																														{
-																															ConditionalExpression: javascript.WrapConditional(&javascript.ObjectLiteral{
-																																PropertyDefinitionList: []javascript.PropertyDefinition{
-																																	{
-																																		PropertyName: &javascript.PropertyName{
-																																			LiteralPropertyName: jToken("once"),
-																																		},
-																																		AssignmentExpression: trueAE,
-																																	},
-																																},
-																															}),
-																														},
-																													},
-																												},
-																											}),
-																										},
-																									},
-																								},
-																							},
-																						},
-																					},
-																				}),
-																			},
-																		},
-																	},
-																},
-															},
-														}),
-													},
-												},
 												{
 													PropertyName: &javascript.PropertyName{
 														LiteralPropertyName: jToken("include"),
