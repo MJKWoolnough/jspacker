@@ -409,14 +409,7 @@ func (c *config) makeLoader() error {
 		}
 	}
 	if include == nil {
-		include = &javascript.AssignmentExpression{
-			ArrowFunction: &javascript.ArrowFunction{
-				BindingIdentifier: url,
-				AssignmentExpression: &javascript.AssignmentExpression{
-					ConditionalExpression: importURL,
-				},
-			},
-		}
+		return nil
 	}
 	globalThis := &javascript.PrimaryExpression{
 		IdentifierReference: jToken("globalThis"),
