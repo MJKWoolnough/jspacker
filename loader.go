@@ -33,10 +33,6 @@ func (c *config) makeLoader() error {
 			IdentifierReference: jToken("Object"),
 		},
 	}
-	objectDefineProperties := &javascript.MemberExpression{
-		MemberExpression: object,
-		IdentifierName:   jToken("defineProperties"),
-	}
 	url := jToken("url")
 	wrappedURL := javascript.WrapConditional(&javascript.PrimaryExpression{
 		IdentifierReference: url,
@@ -235,7 +231,10 @@ func (c *config) makeLoader() error {
 																																			ArgumentList: []javascript.AssignmentExpression{
 																																				{
 																																					ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
-																																						MemberExpression: objectDefineProperties,
+																																						MemberExpression: &javascript.MemberExpression{
+																																							MemberExpression: object,
+																																							IdentifierName:   jToken("defineProperties"),
+																																						},
 																																						Arguments: &javascript.Arguments{
 																																							ArgumentList: []javascript.AssignmentExpression{
 																																								{
@@ -423,29 +422,30 @@ func (c *config) makeLoader() error {
 				Expressions: []javascript.AssignmentExpression{
 					{
 						ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
-							MemberExpression: objectDefineProperties,
+							MemberExpression: &javascript.MemberExpression{
+								MemberExpression: object,
+								IdentifierName:   jToken("defineProperty"),
+							},
 							Arguments: &javascript.Arguments{
 								ArgumentList: []javascript.AssignmentExpression{
 									{
 										ConditionalExpression: javascript.WrapConditional(globalThis),
 									},
 									{
+										ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+											Literal: &javascript.Token{
+												Token: parser.Token{
+													Data: "\"include\"",
+												},
+											},
+										}),
+									},
+									{
 										ConditionalExpression: javascript.WrapConditional(&javascript.ObjectLiteral{
 											PropertyDefinitionList: []javascript.PropertyDefinition{
 												{
-													PropertyName: &javascript.PropertyName{
-														LiteralPropertyName: jToken("include"),
-													},
-													AssignmentExpression: &javascript.AssignmentExpression{
-														ConditionalExpression: javascript.WrapConditional(&javascript.ObjectLiteral{
-															PropertyDefinitionList: []javascript.PropertyDefinition{
-																{
-																	PropertyName:         value,
-																	AssignmentExpression: include,
-																},
-															},
-														}),
-													},
+													PropertyName:         value,
+													AssignmentExpression: include,
 												},
 											},
 										}),
