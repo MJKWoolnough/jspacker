@@ -92,6 +92,9 @@ func run() error {
 			return fmt.Errorf("error generating output: %w", err)
 		}
 	}
+	for len(s.StatementList) > 0 && s.StatementList[0].Declaration == nil && s.StatementList[0].Statement == nil {
+		s.StatementList = s.StatementList[1:]
+	}
 	if reorder {
 		sort.Stable(statementSorter(s.StatementList[1:]))
 	}
