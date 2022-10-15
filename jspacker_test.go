@@ -173,6 +173,38 @@ func TestPackage(t *testing.T) {
 			"Object.defineProperty(globalThis, \"include\", {value: (() => {\n\tconst imports = new Map([[\"/a.js\"], [\"/b.js\", [\"default\", () => b_default]]].map(([url, ...props]) => [url, Object.freeze(Object.defineProperties({}, Object.fromEntries(props.map(([prop, get]) => [prop, {enumerable: true, get}]))))]));\n\treturn url => Promise.resolve(imports.get(url) ?? import(url));\n})()});\n\nconst b_b = 1;\n\nconst b_default = b_b;\n\nconsole.log(b_default);",
 			[]Option{File("/a.js")},
 		},
+		{ // 19
+			loader{
+				"/a.js": "import vr from './b.js'; console.log(vr)",
+				"/b.js": "export default class MyClass {}",
+			},
+			"Object.defineProperty(globalThis, \"include\", {value: (() => {\n\tconst imports = new Map([[\"/a.js\"], [\"/b.js\", [\"default\", () => b_default]]].map(([url, ...props]) => [url, Object.freeze(Object.defineProperties({}, Object.fromEntries(props.map(([prop, get]) => [prop, {enumerable: true, get}]))))]));\n\treturn url => Promise.resolve(imports.get(url) ?? import(url));\n})()});\n\nclass b_default {}\n\nconsole.log(b_default);",
+			[]Option{File("/a.js")},
+		},
+		{ // 20
+			loader{
+				"/a.js": "import vr from './b.js'; console.log(vr)",
+				"/b.js": "export default class MyClass {static INSTANCE = new MyClass();}",
+			},
+			"Object.defineProperty(globalThis, \"include\", {value: (() => {\n\tconst imports = new Map([[\"/a.js\"], [\"/b.js\", [\"default\", () => b_default]]].map(([url, ...props]) => [url, Object.freeze(Object.defineProperties({}, Object.fromEntries(props.map(([prop, get]) => [prop, {enumerable: true, get}]))))]));\n\treturn url => Promise.resolve(imports.get(url) ?? import(url));\n})()});\n\nclass b_default {\n\tstatic INSTANCE = new b_default();\n}\n\nconsole.log(b_default);",
+			[]Option{File("/a.js")},
+		},
+		{ // 21
+			loader{
+				"/a.js": "import vr from './b.js'; console.log(vr)",
+				"/b.js": "export default function aaa() {}",
+			},
+			"Object.defineProperty(globalThis, \"include\", {value: (() => {\n\tconst imports = new Map([[\"/a.js\"], [\"/b.js\", [\"default\", () => b_default]]].map(([url, ...props]) => [url, Object.freeze(Object.defineProperties({}, Object.fromEntries(props.map(([prop, get]) => [prop, {enumerable: true, get}]))))]));\n\treturn url => Promise.resolve(imports.get(url) ?? import(url));\n})()});\n\nfunction b_default() {}\n\nconsole.log(b_default);",
+			[]Option{File("/a.js")},
+		},
+		{ // 22
+			loader{
+				"/a.js": "import vr from './b.js'; console.log(vr)",
+				"/b.js": "export default function aaa() {aaa()}",
+			},
+			"Object.defineProperty(globalThis, \"include\", {value: (() => {\n\tconst imports = new Map([[\"/a.js\"], [\"/b.js\", [\"default\", () => b_default]]].map(([url, ...props]) => [url, Object.freeze(Object.defineProperties({}, Object.fromEntries(props.map(([prop, get]) => [prop, {enumerable: true, get}]))))]));\n\treturn url => Promise.resolve(imports.get(url) ?? import(url));\n})()});\n\nfunction b_default() {\n\tb_default();\n}\n\nconsole.log(b_default);",
+			[]Option{File("/a.js")},
+		},
 	} {
 		s, err := Package(append(test.Options, Loader(test.Input.load))...)
 		if err != nil {
