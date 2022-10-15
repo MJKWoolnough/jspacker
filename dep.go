@@ -204,6 +204,8 @@ func (d *dependency) process() error {
 						ed.DefaultFunction.BindingIdentifier = def
 					} else {
 						def = ed.DefaultFunction.BindingIdentifier
+						d.scope.Bindings["default"] = d.scope.Bindings[def.Data]
+						delete(d.scope.Bindings, def.Data)
 					}
 					d.config.statementList = append(d.config.statementList, javascript.StatementListItem{
 						Declaration: &javascript.Declaration{
@@ -215,6 +217,8 @@ func (d *dependency) process() error {
 						ed.DefaultClass.BindingIdentifier = def
 					} else {
 						def = ed.DefaultClass.BindingIdentifier
+						d.scope.Bindings["default"] = d.scope.Bindings[def.Data]
+						delete(d.scope.Bindings, def.Data)
 					}
 					d.config.statementList = append(d.config.statementList, javascript.StatementListItem{
 						Declaration: &javascript.Declaration{
@@ -236,11 +240,13 @@ func (d *dependency) process() error {
 						},
 					})
 				}
-				d.scope.Bindings["default"] = []scope.Binding{
-					{
-						BindingType: scope.BindingLexicalConst,
-						Token:       def,
-					},
+				if len(d.scope.Bindings["default"]) == 0 {
+					d.scope.Bindings["default"] = []scope.Binding{
+						{
+							BindingType: scope.BindingLexicalConst,
+							Token:       def,
+						},
+					}
 				}
 				d.setExportBinding("default", nil, "default")
 			}
