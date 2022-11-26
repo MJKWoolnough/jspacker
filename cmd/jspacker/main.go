@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -42,11 +43,14 @@ func run() error {
 	flag.Var(&filesTodo, "i", "input file")
 	flag.StringVar(&output, "o", "-", "output file")
 	flag.StringVar(&base, "b", "", "js base dir")
-	flag.BoolVar(&plugin, "p", false, "export file(s) as plugin(s)")
+	flag.BoolVar(&plugin, "p", false, "export file as plugin")
 	flag.BoolVar(&noExports, "n", false, "no exports")
 	flag.BoolVar(&reorder, "x", false, "experimental script re-ordering to enable better minification (BE CAREFUL)")
 	flag.Parse()
 
+	if plugin && len(filesTodo) != 1 {
+		return errors.New("plugin mode requires a single file")
+	}
 	if output == "" {
 		output = "-"
 	}
@@ -62,7 +66,7 @@ func run() error {
 		return fmt.Errorf("error getting absolute path for base: %w", err)
 	}
 	var s *javascript.Script
-	if plugin && len(filesTodo) == 1 {
+	if plugin {
 		f, err := os.Open(filepath.Join(base, filepath.FromSlash(filesTodo[0])))
 		if err != nil {
 			return fmt.Errorf("error opening url: %w", err)
