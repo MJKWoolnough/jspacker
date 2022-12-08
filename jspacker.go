@@ -157,7 +157,7 @@ func Plugin(m *javascript.Module, url string) (*javascript.Script, error) {
 		importBindings       = make(importBindingMap)
 		importObjectBindings []javascript.BindingElement
 		importURLsArrayE     []javascript.ArrayElement
-		importURLsArray      []javascript.AssignmentExpression
+		importURLsArray      []javascript.Argument
 		statementList        = make([]javascript.StatementListItem, 1, len(m.ModuleListItems))
 		d                    = dependency{
 			url:    url,
@@ -178,14 +178,16 @@ func Plugin(m *javascript.Module, url string) (*javascript.Script, error) {
 				imports++
 				ib = id2String(imports)
 				importURLs[iurl] = ib
-				ae := javascript.AssignmentExpression{
-					ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-						Literal: jToken(strconv.Quote(iurl)),
-					}),
+				ae := javascript.Argument{
+					AssignmentExpression: javascript.AssignmentExpression{
+						ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+							Literal: jToken(strconv.Quote(iurl)),
+						}),
+					},
 				}
 				importURLsArray = append(importURLsArray, ae)
 				importURLsArrayE = append(importURLsArrayE, javascript.ArrayElement{
-					AssignmentExpression: ae,
+					AssignmentExpression: ae.AssignmentExpression,
 				})
 				importObjectBindings = append(importObjectBindings, javascript.BindingElement{
 					SingleNameBinding: jToken(ib),
@@ -327,29 +329,33 @@ func Plugin(m *javascript.Module, url string) (*javascript.Script, error) {
 													IdentifierName: jToken("all"),
 												},
 												Arguments: &javascript.Arguments{
-													ArgumentList: []javascript.AssignmentExpression{
+													ArgumentList: []javascript.Argument{
 														{
-															ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
-																MemberExpression: &javascript.MemberExpression{
+															AssignmentExpression: javascript.AssignmentExpression{
+																ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
 																	MemberExpression: &javascript.MemberExpression{
-																		PrimaryExpression: &javascript.PrimaryExpression{
-																			ArrayLiteral: &javascript.ArrayLiteral{
-																				ElementList: importURLsArrayE,
+																		MemberExpression: &javascript.MemberExpression{
+																			PrimaryExpression: &javascript.PrimaryExpression{
+																				ArrayLiteral: &javascript.ArrayLiteral{
+																					ElementList: importURLsArrayE,
+																				},
+																			},
+																		},
+																		IdentifierName: jToken("map"),
+																	},
+																	Arguments: &javascript.Arguments{
+																		ArgumentList: []javascript.Argument{
+																			{
+																				AssignmentExpression: javascript.AssignmentExpression{
+																					ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+																						IdentifierReference: jToken("include"),
+																					}),
+																				},
 																			},
 																		},
 																	},
-																	IdentifierName: jToken("map"),
-																},
-																Arguments: &javascript.Arguments{
-																	ArgumentList: []javascript.AssignmentExpression{
-																		{
-																			ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																				IdentifierReference: jToken("include"),
-																			}),
-																		},
-																	},
-																},
-															}),
+																}),
+															},
 														},
 													},
 												},
