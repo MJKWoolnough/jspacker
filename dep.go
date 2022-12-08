@@ -112,16 +112,20 @@ func (d *dependency) process() error {
 															},
 														},
 														Arguments: &javascript.Arguments{
-															ArgumentList: []javascript.AssignmentExpression{
+															ArgumentList: []javascript.Argument{
 																{
-																	ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																		Literal: jToken(strconv.Quote(iurl)),
-																	}),
+																	AssignmentExpression: javascript.AssignmentExpression{
+																		ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+																			Literal: jToken(strconv.Quote(iurl)),
+																		}),
+																	},
 																},
 																{
-																	ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																		Literal: jToken("true"),
-																	}),
+																	AssignmentExpression: javascript.AssignmentExpression{
+																		ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+																			Literal: jToken("true"),
+																		}),
+																	},
 																},
 															},
 														},
@@ -327,13 +331,15 @@ func (d *dependency) Handle(t javascript.Type) error {
 			},
 		}
 		ce.Arguments = &javascript.Arguments{
-			ArgumentList: []javascript.AssignmentExpression{
-				*ce.ImportCall,
+			ArgumentList: []javascript.Argument{
+				{
+					AssignmentExpression: *ce.ImportCall,
+				},
 			},
 		}
 		ce.ImportCall = nil
 	} else if ok && ce.MemberExpression != nil && ce.MemberExpression.PrimaryExpression != nil && ce.MemberExpression.PrimaryExpression.IdentifierReference != nil && ce.MemberExpression.PrimaryExpression.IdentifierReference.Data == "include" && ce.MemberExpression.MemberExpression == nil && ce.MemberExpression.Expression == nil && ce.MemberExpression.IdentifierName == nil && ce.MemberExpression.TemplateLiteral == nil && !ce.MemberExpression.SuperProperty && !ce.MemberExpression.NewTarget && !ce.MemberExpression.ImportMeta && ce.MemberExpression.Arguments == nil && !ce.SuperCall && ce.ImportCall == nil && ce.Arguments != nil && ce.Expression == nil && ce.IdentifierName == nil && ce.TemplateLiteral == nil && len(ce.Arguments.ArgumentList) == 1 {
-		d.HandleImportConditional(ce.Arguments.ArgumentList[0].ConditionalExpression)
+		d.HandleImportConditional(ce.Arguments.ArgumentList[0].AssignmentExpression.ConditionalExpression)
 	} else if d.config != nil {
 		if me, ok := t.(*javascript.MemberExpression); ok && me.ImportMeta {
 			d.needsMeta = true
