@@ -16,7 +16,8 @@ func (l loader) load(url string) (*javascript.Module, error) {
 	if !ok {
 		return nil, os.ErrNotExist
 	}
-	return javascript.ParseModule(parser.NewStringTokeniser(d))
+	tks := parser.NewStringTokeniser(d)
+	return javascript.ParseModule(&tks)
 }
 
 func TestPackage(t *testing.T) {
@@ -244,7 +245,8 @@ func TestPlugin(t *testing.T) {
 			"const a_ = await include(\"/b.js\");\n\nconsole.log(a_);",
 		},
 	} {
-		m, err := javascript.ParseModule(parser.NewStringTokeniser(test.Input))
+		tks := parser.NewStringTokeniser(test.Input)
+		m, err := javascript.ParseModule(&tks)
 		if err != nil {
 			t.Fatalf("test %d: unexpected err: %s", n+1, err)
 		}
