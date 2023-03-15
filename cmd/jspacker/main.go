@@ -71,7 +71,8 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("error opening url: %w", err)
 		}
-		m, err := javascript.ParseModule(parser.NewReaderTokeniser(f))
+		tks := parser.NewReaderTokeniser(f)
+		m, err := javascript.ParseModule(&tks)
 		f.Close()
 		if err != nil {
 			return fmt.Errorf("error parsing javascript module: %w", err)
