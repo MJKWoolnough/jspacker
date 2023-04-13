@@ -27,33 +27,67 @@ type config struct {
 	dependency
 }
 
-const jsSuffix = ".js"
+const (
+	jsSuffix = ".js"
+	tsSuffix = ".ts"
+)
 
 // OSLoad is the default loader for Package, with the base set to CWD
 func OSLoad(base string) func(string) (*javascript.Module, error) {
 	return func(urlPath string) (*javascript.Module, error) {
-		f, err := os.Open(filepath.Join(base, filepath.FromSlash(urlPath)))
-		if err != nil {
-			if os.IsNotExist(err) {
-				if u, errr := url.Parse(urlPath); errr == nil {
-					if u.Path != urlPath {
-						f, err = os.Open(filepath.Join(base, filepath.FromSlash(u.Path)))
-					}
-					if err != nil && !strings.HasSuffix(u.Path, jsSuffix) {
-						u.Path += jsSuffix
-						f, err = os.Open(filepath.Join(base, u.String()))
-						if err != nil {
-							f, err = os.Open(filepath.Join(base, u.Path))
-						}
-					}
+		var (
+			f   *os.File
+			err error
+			ts  bool
+		)
+		for _, loader := range [...]func() (*os.File, error){
+			func() (*os.File, error) { // Assume that any TS file will be more up-to-date by default
+				if strings.HasSuffix(urlPath, jsSuffix) {
+					ts = true
+					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath[:len(urlPath)-3]+tsSuffix)))
 				}
-			}
-			if err != nil {
-				return nil, fmt.Errorf("error opening file (%s): %w", urlPath, err)
+				return nil, nil
+			},
+			func() (*os.File, error) { // Normal
+				return os.Open(filepath.Join(base, filepath.FromSlash(urlPath)))
+			},
+			func() (*os.File, error) { // As URL
+				if u, err := url.Parse(urlPath); err == nil && u.Path != urlPath {
+					return os.Open(filepath.Join(base, filepath.FromSlash(u.Path)))
+				}
+				return nil, nil
+			},
+			func() (*os.File, error) { // Add TS extension
+				if !strings.HasSuffix(urlPath, tsSuffix) {
+					ts = true
+					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath+tsSuffix)))
+				}
+				return nil, nil
+			},
+			func() (*os.File, error) { // Add JS extension
+				if !strings.HasSuffix(urlPath, jsSuffix) {
+					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath+jsSuffix)))
+				}
+				return nil, nil
+			},
+		} {
+			fb, errr := loader()
+			if fb != nil {
+				f = fb
+				break
+			} else if err == nil {
+				err = errr
 			}
 		}
-		tks := parser.NewReaderTokeniser(f)
-		m, err := javascript.ParseModule(&tks)
+		if f == nil {
+			return nil, fmt.Errorf("error opening file (%s): %w", urlPath, err)
+		}
+		rt := parser.NewReaderTokeniser(f)
+		var tks javascript.Tokeniser = &rt
+		if ts {
+			tks = javascript.AsTypescript(&rt)
+		}
+		m, err := javascript.ParseModule(tks)
 		f.Close()
 		if err != nil {
 			return nil, fmt.Errorf("error parsing file (%s): %w", urlPath, err)
