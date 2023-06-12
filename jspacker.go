@@ -40,7 +40,7 @@ func OSLoad(base string) func(string) (*javascript.Module, error) {
 			err error
 		)
 		ts := strings.HasSuffix(base, tsSuffix)
-		for n, loader := range [...]func() (*os.File, error){
+		for _, loader := range [...]func() (*os.File, error){
 			func() (*os.File, error) { // Assume that any TS file will be more up-to-date by default
 				if strings.HasSuffix(urlPath, jsSuffix) {
 					ts = true
