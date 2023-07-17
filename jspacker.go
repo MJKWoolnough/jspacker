@@ -49,11 +49,19 @@ func OSLoad(base string) func(string) (*javascript.Module, error) {
 				return nil, nil
 			},
 			func() (*os.File, error) { // Normal
-				return os.Open(filepath.Join(base, filepath.FromSlash(urlPath)))
+				f, err := os.Open(filepath.Join(base, filepath.FromSlash(urlPath)))
+				if err == nil {
+					ts = strings.HasSuffix(urlPath, tsSuffix)
+				}
+				return f, err
 			},
 			func() (*os.File, error) { // As URL
 				if u, err := url.Parse(urlPath); err == nil && u.Path != urlPath {
-					return os.Open(filepath.Join(base, filepath.FromSlash(u.Path)))
+					f, err := os.Open(filepath.Join(base, filepath.FromSlash(u.Path)))
+					if err == nil {
+						ts = strings.HasSuffix(urlPath, tsSuffix)
+					}
+					return f, err
 				}
 				return nil, nil
 			},
