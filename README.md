@@ -2,7 +2,7 @@
 --
     import "vimagination.zapto.org/jspacker"
 
-Package jspacker is a javascript packer for javascript projects
+Package jspacker is a javascript packer for javascript projects.
 
 ## Usage
 
@@ -13,21 +13,21 @@ var (
 	ErrInvalidURL    = errors.New("added files must be absolute URLs")
 )
 ```
-Errors
+Errors.
 
 #### func  NoExports
 
 ```go
 func NoExports(c *config)
 ```
-NoExports disables the creation of exports for any potential plugins
+NoExports disables the creation of exports for any potential plugins.
 
 #### func  OSLoad
 
 ```go
 func OSLoad(base string) func(string) (*javascript.Module, error)
 ```
-OSLoad is the default loader for Package, with the base set to CWD
+OSLoad is the default loader for Package, with the base set to CWD.
 
 #### func  Package
 
@@ -35,14 +35,14 @@ OSLoad is the default loader for Package, with the base set to CWD
 func Package(opts ...Option) (*javascript.Script, error)
 ```
 Package packages up multiple javascript modules into a single file, renaming
-bindings to simulate imports
+bindings to simulate imports.
 
 #### func  ParseDynamic
 
 ```go
 func ParseDynamic(c *config)
 ```
-ParseDynamic turns on dynamic import/include parsing
+ParseDynamic turns on dynamic import/include parsing.
 
 #### func  Plugin
 
@@ -50,7 +50,7 @@ ParseDynamic turns on dynamic import/include parsing
 func Plugin(m *javascript.Module, url string) (*javascript.Script, error)
 ```
 Plugin converts a single javascript module to make use of the processed exports
-from package
+from package.
 
 #### type Option
 
@@ -58,18 +58,18 @@ from package
 type Option func(*config)
 ```
 
-Option in a type that can be passed to Package to set an option
+Option in a type that can be passed to Package to set an option.
 
 #### func  File
 
 ```go
 func File(url string) Option
 ```
-File is an Option that specifies a starting file for Package
+File is an Option that specifies a starting file for Package.
 
 #### func  Loader
 
 ```go
 func Loader(l func(string) (*javascript.Module, error)) Option
 ```
-Loader sets the func that will take URLs and produce a parsed module
+Loader sets the func that will take URLs and produce a parsed module.
