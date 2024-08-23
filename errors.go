@@ -2,7 +2,7 @@ package jspacker
 
 import "errors"
 
-// Errors
+// Errors.
 var (
 	ErrInvalidExport = errors.New("invalid export")
 	ErrNoFiles       = errors.New("no files")

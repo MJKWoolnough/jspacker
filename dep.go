@@ -32,13 +32,17 @@ func id2String(id uint) string {
 		p [15]byte
 		n = 14
 	)
+
 	p[14] = '_'
+
 	for id > 0 {
 		n--
 		id--
+
 		p[n] = 'a' + byte(id%26)
 		id /= 26
 	}
+
 	return string(p[n:])
 }
 
@@ -47,6 +51,7 @@ func (d *dependency) addImport(url string) (*dependency, error) {
 	e, ok := c.filesDone[url]
 	if !ok {
 		c.nextID++
+
 		id := c.nextID
 		e = &dependency{
 			config:   c,
@@ -57,11 +62,14 @@ func (d *dependency) addImport(url string) (*dependency, error) {
 			prefix:   id2String(id),
 		}
 		c.filesDone[url] = e
+
 		if err := e.process(); err != nil {
 			return nil, err
 		}
 	}
+
 	d.requires[url] = e
+
 	return e, nil
 }
 
@@ -70,29 +78,37 @@ func (d *dependency) process() error {
 	if err != nil {
 		return err
 	}
+
 	d.scope, err = scope.ModuleScope(module, nil)
 	if err != nil {
 		if derr, ok := err.(scope.ErrDuplicateDeclaration); ok {
 			return fmt.Errorf("error processing scope in file %s: %w: %v", d.url, err, derr.Duplicate)
 		}
+
 		return fmt.Errorf("error processing scope in file %s: %w", d.url, err)
 	}
+
 	for _, li := range module.ModuleListItems {
 		if li.ImportDeclaration != nil {
 			durl, _ := javascript.Unquote(li.ImportDeclaration.FromClause.ModuleSpecifier.Data)
 			iurl := d.RelTo(durl)
+
 			e, err := d.addImport(iurl)
 			if err != nil {
 				return err
 			}
+
 			if li.ImportDeclaration.ImportClause == nil {
 				continue
 			}
+
 			if li.ImportDeclaration.ImportedDefaultBinding != nil {
 				d.setImportBinding(li.ImportDeclaration.ImportedDefaultBinding.Data, e, "default")
 			}
+
 			if li.ImportDeclaration.NameSpaceImport != nil {
 				d.setImportBinding(li.ImportDeclaration.NameSpaceImport.Data, e, "*")
+
 				d.config.statementList = append(d.config.statementList, javascript.StatementListItem{
 					Declaration: &javascript.Declaration{
 						LexicalDeclaration: &javascript.LexicalDeclaration{
@@ -142,28 +158,30 @@ func (d *dependency) process() error {
 			} else if li.ImportDeclaration.NamedImports != nil {
 				for _, is := range li.ImportDeclaration.NamedImports.ImportList {
 					tk := is.ImportedBinding
+
 					if is.IdentifierName != nil {
 						tk = is.IdentifierName
 					}
+
 					d.setImportBinding(is.ImportedBinding.Data, e, tk.Data)
 				}
 			}
 		} else if li.StatementListItem != nil {
 			d.config.statementList = append(d.config.statementList, *li.StatementListItem)
 		} else if li.ExportDeclaration != nil {
-			ed := li.ExportDeclaration
-			if ed.FromClause != nil {
+			if ed := li.ExportDeclaration; ed.FromClause != nil {
 				durl, _ := javascript.Unquote(ed.FromClause.ModuleSpecifier.Data)
-				e, err := d.addImport(d.RelTo(durl))
-				if err != nil {
+
+				if e, err := d.addImport(d.RelTo(durl)); err != nil {
 					return err
-				}
-				if ed.ExportClause != nil {
+				} else if ed.ExportClause != nil {
 					for _, es := range ed.ExportClause.ExportList {
 						tk := es.IdentifierName.Data
+
 						if es.EIdentifierName != nil {
 							tk = es.EIdentifierName.Data
 						}
+
 						d.setExportBinding(tk, e, es.IdentifierName.Data)
 					}
 				} else if ed.ExportFromClause != nil {
@@ -174,15 +192,18 @@ func (d *dependency) process() error {
 			} else if ed.ExportClause != nil {
 				for _, es := range ed.ExportClause.ExportList {
 					tk := es.IdentifierName.Data
+
 					if es.EIdentifierName != nil {
 						tk = es.EIdentifierName.Data
 					}
+
 					d.setExportBinding(tk, nil, es.IdentifierName.Data)
 				}
 			} else if ed.VariableStatement != nil {
 				for _, vd := range ed.VariableStatement.VariableDeclarationList {
 					d.processBindingElement(vd.BindingIdentifier, vd.ArrayBindingPattern, vd.ObjectBindingPattern)
 				}
+
 				d.config.statementList = append(d.config.statementList, javascript.StatementListItem{
 					Statement: &javascript.Statement{
 						VariableStatement: ed.VariableStatement,
@@ -198,6 +219,7 @@ func (d *dependency) process() error {
 						d.processBindingElement(lb.BindingIdentifier, lb.ArrayBindingPattern, lb.ObjectBindingPattern)
 					}
 				}
+
 				d.config.statementList = append(d.config.statementList, javascript.StatementListItem{
 					Declaration: ed.Declaration,
 				})
@@ -209,8 +231,10 @@ func (d *dependency) process() error {
 					} else {
 						def = ed.DefaultFunction.BindingIdentifier
 						d.scope.Bindings["default"] = d.scope.Bindings[def.Data]
+
 						delete(d.scope.Bindings, def.Data)
 					}
+
 					d.config.statementList = append(d.config.statementList, javascript.StatementListItem{
 						Declaration: &javascript.Declaration{
 							FunctionDeclaration: ed.DefaultFunction,
@@ -222,8 +246,10 @@ func (d *dependency) process() error {
 					} else {
 						def = ed.DefaultClass.BindingIdentifier
 						d.scope.Bindings["default"] = d.scope.Bindings[def.Data]
+
 						delete(d.scope.Bindings, def.Data)
 					}
+
 					d.config.statementList = append(d.config.statementList, javascript.StatementListItem{
 						Declaration: &javascript.Declaration{
 							ClassDeclaration: ed.DefaultClass,
@@ -244,6 +270,7 @@ func (d *dependency) process() error {
 						},
 					})
 				}
+
 				if len(d.scope.Bindings["default"]) == 0 {
 					d.scope.Bindings["default"] = []scope.Binding{
 						{
@@ -252,10 +279,12 @@ func (d *dependency) process() error {
 						},
 					}
 				}
+
 				d.setExportBinding("default", nil, "default")
 			}
 		}
 	}
+
 	if d.needsMeta {
 		d.config.statementList[1].Declaration.LexicalDeclaration.BindingList = append(d.config.statementList[1].Declaration.LexicalDeclaration.BindingList, javascript.LexicalBinding{
 			BindingIdentifier: jToken(d.prefix + "import"),
@@ -313,23 +342,28 @@ func (d *dependency) process() error {
 			},
 		})
 	}
+
 	d.processBindings(d.scope)
+
 	if d.config.parseDynamic {
 		if err := walk.Walk(module, d); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
 func (d *dependency) Handle(t javascript.Type) error {
 	if ce, ok := t.(*javascript.CallExpression); ok && isConditionalExpression(ce.ImportCall) {
 		d.HandleImportConditional(ce.ImportCall.ConditionalExpression)
+
 		ce.MemberExpression = &javascript.MemberExpression{
 			PrimaryExpression: &javascript.PrimaryExpression{
 				IdentifierReference: jToken("include"),
 			},
 		}
+
 		ce.Arguments = &javascript.Arguments{
 			ArgumentList: []javascript.Argument{
 				{
@@ -337,6 +371,7 @@ func (d *dependency) Handle(t javascript.Type) error {
 				},
 			},
 		}
+
 		ce.ImportCall = nil
 	} else if ok && ce.MemberExpression != nil && ce.MemberExpression.PrimaryExpression != nil && ce.MemberExpression.PrimaryExpression.IdentifierReference != nil && ce.MemberExpression.PrimaryExpression.IdentifierReference.Data == "include" && ce.MemberExpression.MemberExpression == nil && ce.MemberExpression.Expression == nil && ce.MemberExpression.IdentifierName == nil && ce.MemberExpression.TemplateLiteral == nil && !ce.MemberExpression.SuperProperty && !ce.MemberExpression.NewTarget && !ce.MemberExpression.ImportMeta && ce.MemberExpression.Arguments == nil && !ce.SuperCall && ce.ImportCall == nil && ce.Arguments != nil && ce.Expression == nil && ce.IdentifierName == nil && ce.TemplateLiteral == nil && len(ce.Arguments.ArgumentList) == 1 {
 		d.HandleImportConditional(ce.Arguments.ArgumentList[0].AssignmentExpression.ConditionalExpression)
@@ -349,6 +384,7 @@ func (d *dependency) Handle(t javascript.Type) error {
 			me.ImportMeta = false
 		}
 	}
+
 	return walk.Walk(t, d)
 }
 
@@ -357,6 +393,7 @@ func (d *dependency) HandleImportConditional(ce *javascript.ConditionalExpressio
 		if isConditionalExpression(ce.True) {
 			d.HandleImportConditional(ce.True.ConditionalExpression)
 		}
+
 		if isConditionalExpression(ce.False) {
 			d.HandleImportConditional(ce.False.ConditionalExpression)
 		}
@@ -364,8 +401,10 @@ func (d *dependency) HandleImportConditional(ce *javascript.ConditionalExpressio
 		durl, _ := javascript.Unquote(pe.Literal.Data)
 		iurl := d.RelTo(durl)
 		pe.Literal.Data = strconv.Quote(iurl)
+
 		if d.config != nil {
 			d.addImport(iurl)
+
 			d.dynamicRequirement = true
 		}
 	}
@@ -375,6 +414,7 @@ func (d *dependency) RelTo(url string) string {
 	if len(url) > 0 && url[0] == '/' {
 		return url
 	}
+
 	return path.Join(path.Dir(d.url), url)
 }
 
@@ -400,6 +440,7 @@ func (d *dependency) processArrayBinding(binding *javascript.ArrayBindingPattern
 	for _, be := range binding.BindingElementList {
 		d.processBindingElement(be.SingleNameBinding, be.ArrayBindingPattern, be.ObjectBindingPattern)
 	}
+
 	if binding.BindingRestElement != nil {
 		d.processBindingElement(binding.BindingRestElement.SingleNameBinding, binding.BindingRestElement.ArrayBindingPattern, binding.BindingRestElement.ObjectBindingPattern)
 	}
@@ -409,6 +450,7 @@ func (d *dependency) processObjectBinding(binding *javascript.ObjectBindingPatte
 	for _, be := range binding.BindingPropertyList {
 		d.processBindingElement(be.BindingElement.SingleNameBinding, be.BindingElement.ArrayBindingPattern, be.BindingElement.ObjectBindingPattern)
 	}
+
 	if binding.BindingRestProperty != nil {
 		d.setExportBinding(binding.BindingRestProperty.Data, nil, binding.BindingRestProperty.Data)
 	}
@@ -425,46 +467,47 @@ func (d *dependency) processBindingElement(snb *javascript.Token, abp *javascrip
 }
 
 func (d *dependency) resolveExport(binding string) *scope.Binding {
-	export, ok := d.exports[binding]
-	if !ok {
+	if export, ok := d.exports[binding]; !ok {
 		return nil
-	}
-	if export.dependency != nil {
+	} else if export.dependency != nil {
 		return export.dependency.resolveExport(export.binding)
-	}
-	imp, ok := d.imports[export.binding]
-	if ok {
+	} else if imp, ok := d.imports[export.binding]; ok {
 		return imp.dependency.resolveExport(imp.binding)
-	}
-	sc, ok := d.scope.Bindings[export.binding]
-	if !ok || len(sc) == 0 {
+	} else if sc, ok := d.scope.Bindings[export.binding]; !ok || len(sc) == 0 {
 		return nil
+	} else {
+		return &sc[0]
 	}
-	return &sc[0]
 }
 
 func (d *dependency) resolveImports() error {
 	if d.done {
 		return nil
 	}
+
 	d.done = true
+
 	for _, r := range d.requires {
 		if err := r.resolveImports(); err != nil {
 			return err
 		}
 	}
+
 	for name, binding := range d.imports {
 		if binding.binding == "*" {
 			continue
 		}
+
 		b := binding.dependency.resolveExport(binding.binding)
 		if b == nil {
 			return fmt.Errorf("error resolving import %s (%s): %w", name, d.url, ErrInvalidExport)
 		}
+
 		for _, c := range d.scope.Bindings[name] {
 			c.Data = b.Data
 		}
 	}
+
 	return nil
 }
 
@@ -473,10 +516,12 @@ func (d *dependency) processBindings(s *scope.Scope) {
 		if len(bindings) == 0 || bindings[0].BindingType == scope.BindingRef || bindings[0].BindingType == scope.BindingBare || bindings[0].BindingType == scope.BindingImport {
 			continue
 		}
+
 		for n := range bindings {
 			bindings[n].Data = d.prefix + name
 		}
 	}
+
 	for _, cs := range s.Scopes {
 		d.processBindings(cs)
 	}

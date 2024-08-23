@@ -42,11 +42,14 @@ func (c *config) makeLoader() error {
 			ConditionalExpression: wrappedURL,
 		},
 	})
+
 	var include *javascript.AssignmentExpression
+
 	if !c.bare || c.parseDynamic {
 		exportArr := &javascript.ArrayLiteral{
 			ElementList: make([]javascript.ArrayElement, 0, len(c.filesDone)),
 		}
+
 		urls := make([]string, 0, len(c.filesDone))
 		imports := jToken("imports")
 		importsGet := &javascript.MemberExpression{
@@ -57,15 +60,20 @@ func (c *config) makeLoader() error {
 			},
 			IdentifierName: jToken("get"),
 		}
+
 		for url := range c.filesDone {
 			urls = append(urls, url)
 		}
+
 		sort.Strings(urls)
+
 		for _, url := range urls {
 			d := c.filesDone[url]
+
 			if c.bare && !d.dynamicRequirement {
 				continue
 			}
+
 			el := append(make([]javascript.ArrayElement, 0, len(d.exports)+1), javascript.ArrayElement{
 				AssignmentExpression: javascript.AssignmentExpression{
 					ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
@@ -73,11 +81,15 @@ func (c *config) makeLoader() error {
 					}),
 				},
 			})
+
 			props := make([]string, 0, len(d.exports))
+
 			for prop := range d.exports {
 				props = append(props, prop)
 			}
+
 			sort.Strings(props)
+
 			for _, prop := range props {
 				binding := d.exports[prop]
 				propName := javascript.ArrayElement{
@@ -87,7 +99,9 @@ func (c *config) makeLoader() error {
 						}),
 					},
 				}
+
 				var ael []javascript.ArrayElement
+
 				if binding.binding == "" {
 					ael = []javascript.ArrayElement{
 						propName,
@@ -120,6 +134,7 @@ func (c *config) makeLoader() error {
 					if b == nil {
 						return fmt.Errorf("error resolving export %s (%s): %w", prop, d.url, ErrInvalidExport)
 					}
+
 					ael = []javascript.ArrayElement{
 						propName,
 						{
@@ -136,6 +151,7 @@ func (c *config) makeLoader() error {
 						},
 					}
 				}
+
 				el = append(el, javascript.ArrayElement{
 					AssignmentExpression: javascript.AssignmentExpression{
 						ConditionalExpression: javascript.WrapConditional(&javascript.ArrayLiteral{
@@ -144,6 +160,7 @@ func (c *config) makeLoader() error {
 					},
 				})
 			}
+
 			exportArr.ElementList = append(exportArr.ElementList, javascript.ArrayElement{
 				AssignmentExpression: javascript.AssignmentExpression{
 					ConditionalExpression: javascript.WrapConditional(&javascript.ArrayLiteral{
@@ -152,6 +169,7 @@ func (c *config) makeLoader() error {
 				},
 			})
 		}
+
 		if len(exportArr.ElementList) > 0 {
 			mapt := jToken("map")
 			prop := jToken("prop")
@@ -427,9 +445,11 @@ func (c *config) makeLoader() error {
 			}
 		}
 	}
+
 	if include == nil {
 		return nil
 	}
+
 	globalThis := &javascript.PrimaryExpression{
 		IdentifierReference: jToken("globalThis"),
 	}
@@ -484,5 +504,6 @@ func (c *config) makeLoader() error {
 			},
 		},
 	}
+
 	return nil
 }

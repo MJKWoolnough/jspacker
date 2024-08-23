@@ -1,4 +1,4 @@
-// Package jspacker is a javascript packer for javascript projects
+// Package jspacker is a javascript packer for javascript projects.
 package jspacker
 
 import (
@@ -32,20 +32,24 @@ const (
 	tsSuffix = ".ts"
 )
 
-// OSLoad is the default loader for Package, with the base set to CWD
+// OSLoad is the default loader for Package, with the base set to CWD.
 func OSLoad(base string) func(string) (*javascript.Module, error) {
 	return func(urlPath string) (*javascript.Module, error) {
 		var (
 			f   *os.File
 			err error
 		)
+
 		ts := strings.HasSuffix(base, tsSuffix)
+
 		for _, loader := range [...]func() (*os.File, error){
 			func() (*os.File, error) { // Assume that any TS file will be more up-to-date by default
 				if strings.HasSuffix(urlPath, jsSuffix) {
 					ts = true
+
 					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath[:len(urlPath)-3]+tsSuffix)))
 				}
+
 				return nil, nil
 			},
 			func() (*os.File, error) { // Normal
@@ -53,6 +57,7 @@ func OSLoad(base string) func(string) (*javascript.Module, error) {
 				if err == nil {
 					ts = strings.HasSuffix(urlPath, tsSuffix)
 				}
+
 				return f, err
 			},
 			func() (*os.File, error) { // As URL
@@ -61,27 +66,33 @@ func OSLoad(base string) func(string) (*javascript.Module, error) {
 					if err == nil {
 						ts = strings.HasSuffix(urlPath, tsSuffix)
 					}
+
 					return f, err
 				}
+
 				return nil, nil
 			},
 			func() (*os.File, error) { // Add TS extension
 				if !strings.HasSuffix(urlPath, tsSuffix) {
 					ts = true
+
 					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath+tsSuffix)))
 				}
+
 				return nil, nil
 			},
 			func() (*os.File, error) { // Add JS extension
 				if !strings.HasSuffix(urlPath, jsSuffix) {
 					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath+jsSuffix)))
 				}
+
 				return nil, nil
 			},
 		} {
 			fb, errr := loader()
 			if fb != nil {
 				f = fb
+
 				break
 			} else if err == nil {
 				err = errr
@@ -90,22 +101,29 @@ func OSLoad(base string) func(string) (*javascript.Module, error) {
 		if f == nil {
 			return nil, fmt.Errorf("error opening file (%s): %w", urlPath, err)
 		}
+
 		rt := parser.NewReaderTokeniser(f)
+
 		var tks javascript.Tokeniser = &rt
+
 		if ts {
 			tks = javascript.AsTypescript(&rt)
 		}
+
 		m, err := javascript.ParseModule(tks)
+
 		f.Close()
+
 		if err != nil {
 			return nil, fmt.Errorf("error parsing file (%s): %w", urlPath, err)
 		}
+
 		return m, nil
 	}
 }
 
 // Package packages up multiple javascript modules into a single file, renaming
-// bindings to simulate imports
+// bindings to simulate imports.
 func Package(opts ...Option) (*javascript.Script, error) {
 	c := config{
 		statementList: make([]javascript.StatementListItem, 2),
@@ -114,20 +132,26 @@ func Package(opts ...Option) (*javascript.Script, error) {
 			requires: make(map[string]*dependency),
 		},
 	}
+
 	if c.loader == nil {
 		base, err := os.Getwd()
 		if err != nil {
 			return nil, fmt.Errorf("error getting current working directory: %w", err)
 		}
+
 		c.loader = OSLoad(base)
 	}
+
 	c.config = &c
+
 	for _, o := range opts {
 		o(&c)
 	}
+
 	if len(c.filesToDo) == 0 {
 		return nil, ErrNoFiles
 	}
+
 	c.statementList[1].Declaration = &javascript.Declaration{
 		LexicalDeclaration: &javascript.LexicalDeclaration{
 			LetOrConst: javascript.Const,
@@ -148,22 +172,23 @@ func Package(opts ...Option) (*javascript.Script, error) {
 			},
 		},
 	}
+
 	for _, url := range c.filesToDo {
 		if !strings.HasPrefix(url, "/") {
 			return nil, fmt.Errorf("%w: %s", ErrInvalidURL, url)
-		}
-		if _, err := c.dependency.addImport(c.dependency.RelTo(url)); err != nil {
+		} else if _, err := c.dependency.addImport(c.dependency.RelTo(url)); err != nil {
 			return nil, err
 		}
 	}
+
 	for changed := true; changed; {
 		changed = false
+
 		for _, eaf := range c.exportAllFrom {
 			for export := range eaf[1].exports {
 				if export == "default" {
 					continue
-				}
-				if _, ok := eaf[0].exports[export]; !ok {
+				} else if _, ok := eaf[0].exports[export]; !ok {
 					eaf[0].exports[export] = &importBinding{
 						dependency: eaf[1],
 						binding:    export,
@@ -173,27 +198,28 @@ func Package(opts ...Option) (*javascript.Script, error) {
 			}
 		}
 	}
+
 	if err := c.dependency.resolveImports(); err != nil {
 		return nil, err
-	}
-	if err := c.makeLoader(); err != nil {
+	} else if err := c.makeLoader(); err != nil {
 		return nil, err
-	}
-	if len(c.statementList[1].Declaration.LexicalDeclaration.BindingList) == 1 {
+	} else if len(c.statementList[1].Declaration.LexicalDeclaration.BindingList) == 1 {
 		c.statementList[1] = c.statementList[0]
 		c.statementList = c.statementList[1:]
 	}
+
 	return &javascript.Script{
 		StatementList: c.statementList,
 	}, nil
 }
 
 // Plugin converts a single javascript module to make use of the processed
-// exports from package
+// exports from package.
 func Plugin(m *javascript.Module, url string) (*javascript.Script, error) {
 	if !strings.HasPrefix(url, "/") {
 		return nil, ErrInvalidURL
 	}
+
 	var (
 		imports              = uint(0)
 		importURLs           = make(map[string]string)
@@ -207,18 +233,22 @@ func Plugin(m *javascript.Module, url string) (*javascript.Script, error) {
 			prefix: "_",
 		}
 	)
+
 	scope, err := scope.ModuleScope(m, nil)
 	if err != nil {
 		return nil, err
 	}
+
 	for _, li := range m.ModuleListItems {
 		if li.ImportDeclaration != nil {
 			id := li.ImportDeclaration
 			durl, _ := javascript.Unquote(id.ModuleSpecifier.Data)
 			iurl := d.RelTo(durl)
+
 			ib, ok := importURLs[iurl]
 			if !ok {
 				imports++
+
 				ib = id2String(imports)
 				importURLs[iurl] = ib
 				ae := javascript.Argument{
@@ -236,12 +266,14 @@ func Plugin(m *javascript.Module, url string) (*javascript.Script, error) {
 					SingleNameBinding: jToken(ib),
 				})
 			}
+
 			if id.ImportClause != nil {
 				if id.NameSpaceImport != nil {
 					for _, binding := range scope.Bindings[li.ImportDeclaration.NameSpaceImport.Data] {
 						binding.Data = ib
 					}
 				}
+
 				if id.ImportedDefaultBinding != nil {
 					importBindings[id.ImportedDefaultBinding.Data] = javascript.MemberExpression{
 						MemberExpression: &javascript.MemberExpression{
@@ -252,12 +284,15 @@ func Plugin(m *javascript.Module, url string) (*javascript.Script, error) {
 						IdentifierName: jToken("default"),
 					}
 				}
+
 				if id.NamedImports != nil {
 					for _, is := range id.NamedImports.ImportList {
 						tk := is.ImportedBinding
+
 						if is.IdentifierName != nil {
 							tk = is.IdentifierName
 						}
+
 						importBindings[is.ImportedBinding.Data] = javascript.MemberExpression{
 							MemberExpression: &javascript.MemberExpression{
 								PrimaryExpression: &javascript.PrimaryExpression{
@@ -312,7 +347,9 @@ func Plugin(m *javascript.Module, url string) (*javascript.Script, error) {
 			}
 		}
 	}
+
 	d.processBindings(scope)
+
 	if imports == 0 {
 		statementList = statementList[1:]
 	} else if imports == 1 {
@@ -413,11 +450,14 @@ func Plugin(m *javascript.Module, url string) (*javascript.Script, error) {
 			},
 		}
 	}
+
 	s := &javascript.Script{
 		StatementList: statementList,
 	}
+
 	walk.Walk(s, &d)
 	walk.Walk(s, importBindings)
+
 	return s, nil
 }
 
@@ -427,8 +467,10 @@ func (i importBindingMap) Handle(t javascript.Type) error {
 	if me, ok := t.(*javascript.MemberExpression); ok && me.PrimaryExpression != nil && me.PrimaryExpression.IdentifierReference != nil {
 		if nme, ok := i[me.PrimaryExpression.IdentifierReference.Data]; ok {
 			*me = nme
+
 			return nil
 		}
 	}
+
 	return walk.Walk(t, i)
 }
