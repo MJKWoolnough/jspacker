@@ -456,49 +456,51 @@ func (c *config) makeLoader() error {
 	value := &javascript.PropertyName{
 		LiteralPropertyName: jToken("value"),
 	}
-	c.statementList[0] = javascript.StatementListItem{
-		Statement: &javascript.Statement{
-			ExpressionStatement: &javascript.Expression{
-				Expressions: []javascript.AssignmentExpression{
-					{
-						ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
-							MemberExpression: &javascript.MemberExpression{
-								MemberExpression: object,
-								IdentifierName:   jToken("defineProperty"),
-							},
-							Arguments: &javascript.Arguments{
-								ArgumentList: []javascript.Argument{
-									{
-										AssignmentExpression: javascript.AssignmentExpression{
-											ConditionalExpression: javascript.WrapConditional(globalThis),
+	c.moduleItems[0] = javascript.ModuleItem{
+		StatementListItem: &javascript.StatementListItem{
+			Statement: &javascript.Statement{
+				ExpressionStatement: &javascript.Expression{
+					Expressions: []javascript.AssignmentExpression{
+						{
+							ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
+								MemberExpression: &javascript.MemberExpression{
+									MemberExpression: object,
+									IdentifierName:   jToken("defineProperty"),
+								},
+								Arguments: &javascript.Arguments{
+									ArgumentList: []javascript.Argument{
+										{
+											AssignmentExpression: javascript.AssignmentExpression{
+												ConditionalExpression: javascript.WrapConditional(globalThis),
+											},
 										},
-									},
-									{
-										AssignmentExpression: javascript.AssignmentExpression{
-											ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-												Literal: &javascript.Token{
-													Token: parser.Token{
-														Data: "\"include\"",
+										{
+											AssignmentExpression: javascript.AssignmentExpression{
+												ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+													Literal: &javascript.Token{
+														Token: parser.Token{
+															Data: "\"include\"",
+														},
 													},
-												},
-											}),
+												}),
+											},
 										},
-									},
-									{
-										AssignmentExpression: javascript.AssignmentExpression{
-											ConditionalExpression: javascript.WrapConditional(&javascript.ObjectLiteral{
-												PropertyDefinitionList: []javascript.PropertyDefinition{
-													{
-														PropertyName:         value,
-														AssignmentExpression: include,
+										{
+											AssignmentExpression: javascript.AssignmentExpression{
+												ConditionalExpression: javascript.WrapConditional(&javascript.ObjectLiteral{
+													PropertyDefinitionList: []javascript.PropertyDefinition{
+														{
+															PropertyName:         value,
+															AssignmentExpression: include,
+														},
 													},
-												},
-											}),
+												}),
+											},
 										},
 									},
 								},
-							},
-						}),
+							}),
+						},
 					},
 				},
 			},

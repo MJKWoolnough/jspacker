@@ -28,3 +28,8 @@ func Loader(l func(string) (*javascript.Module, error)) Option {
 func ParseDynamic(c *config) {
 	c.parseDynamic = true
 }
+
+// PrimaryExports keeps the export statements from the passed files.
+func PrimaryExports(c *config) {
+	c.primary = true
+}

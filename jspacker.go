@@ -21,9 +21,10 @@ type config struct {
 	loader        func(string) (*javascript.Module, error)
 	bare          bool
 	parseDynamic  bool
+	primary       bool
 	nextID        uint
 	exportAllFrom [][2]*dependency
-	statementList []javascript.StatementListItem
+	moduleItems   []javascript.ModuleItem
 	dependency
 }
 
@@ -124,10 +125,10 @@ func OSLoad(base string) func(string) (*javascript.Module, error) {
 
 // Package packages up multiple javascript modules into a single file, renaming
 // bindings to simulate imports.
-func Package(opts ...Option) (*javascript.Script, error) {
+func Package(opts ...Option) (*javascript.Module, error) {
 	c := config{
-		statementList: make([]javascript.StatementListItem, 2),
-		filesDone:     make(map[string]*dependency),
+		moduleItems: make([]javascript.ModuleItem, 2),
+		filesDone:   make(map[string]*dependency),
 		dependency: dependency{
 			requires: make(map[string]*dependency),
 		},
@@ -152,21 +153,23 @@ func Package(opts ...Option) (*javascript.Script, error) {
 		return nil, ErrNoFiles
 	}
 
-	c.statementList[1].Declaration = &javascript.Declaration{
-		LexicalDeclaration: &javascript.LexicalDeclaration{
-			LetOrConst: javascript.Const,
-			BindingList: []javascript.LexicalBinding{
-				{
-					BindingIdentifier: jToken("o"),
-					Initializer: &javascript.AssignmentExpression{
-						ConditionalExpression: javascript.WrapConditional(javascript.MemberExpression{
-							MemberExpression: &javascript.MemberExpression{
-								PrimaryExpression: &javascript.PrimaryExpression{
-									IdentifierReference: jToken("location"),
+	c.moduleItems[1].StatementListItem = &javascript.StatementListItem{
+		Declaration: &javascript.Declaration{
+			LexicalDeclaration: &javascript.LexicalDeclaration{
+				LetOrConst: javascript.Const,
+				BindingList: []javascript.LexicalBinding{
+					{
+						BindingIdentifier: jToken("o"),
+						Initializer: &javascript.AssignmentExpression{
+							ConditionalExpression: javascript.WrapConditional(javascript.MemberExpression{
+								MemberExpression: &javascript.MemberExpression{
+									PrimaryExpression: &javascript.PrimaryExpression{
+										IdentifierReference: jToken("location"),
+									},
 								},
-							},
-							IdentifierName: jToken("origin"),
-						}),
+								IdentifierName: jToken("origin"),
+							}),
+						},
 					},
 				},
 			},
@@ -176,7 +179,7 @@ func Package(opts ...Option) (*javascript.Script, error) {
 	for _, url := range c.filesToDo {
 		if !strings.HasPrefix(url, "/") {
 			return nil, fmt.Errorf("%w: %s", ErrInvalidURL, url)
-		} else if _, err := c.dependency.addImport(c.dependency.RelTo(url)); err != nil {
+		} else if _, err := c.dependency.addImport(c.dependency.RelTo(url), c.primary); err != nil {
 			return nil, err
 		}
 	}
@@ -203,19 +206,19 @@ func Package(opts ...Option) (*javascript.Script, error) {
 		return nil, err
 	} else if err := c.makeLoader(); err != nil {
 		return nil, err
-	} else if len(c.statementList[1].Declaration.LexicalDeclaration.BindingList) == 1 {
-		c.statementList[1] = c.statementList[0]
-		c.statementList = c.statementList[1:]
+	} else if len(c.moduleItems[1].StatementListItem.Declaration.LexicalDeclaration.BindingList) == 1 {
+		c.moduleItems[1] = c.moduleItems[0]
+		c.moduleItems = c.moduleItems[1:]
 	}
 
-	return &javascript.Script{
-		StatementList: c.statementList,
+	return &javascript.Module{
+		ModuleListItems: c.moduleItems,
 	}, nil
 }
 
 // Plugin converts a single javascript module to make use of the processed
 // exports from package.
-func Plugin(m *javascript.Module, url string) (*javascript.Script, error) {
+func Plugin(m *javascript.Module, url string) (*javascript.Module, error) {
 	if !strings.HasPrefix(url, "/") {
 		return nil, ErrInvalidURL
 	}
@@ -227,7 +230,7 @@ func Plugin(m *javascript.Module, url string) (*javascript.Script, error) {
 		importObjectBindings []javascript.BindingElement
 		importURLsArrayE     []javascript.ArrayElement
 		importURLsArray      []javascript.Argument
-		statementList        = make([]javascript.StatementListItem, 1, len(m.ModuleListItems))
+		moduleItems          = make([]javascript.ModuleItem, 1, len(m.ModuleListItems))
 		d                    = dependency{
 			url:    url,
 			prefix: "_",
@@ -305,41 +308,51 @@ func Plugin(m *javascript.Module, url string) (*javascript.Script, error) {
 				}
 			}
 		} else if li.StatementListItem != nil {
-			statementList = append(statementList, *li.StatementListItem)
+			moduleItems = append(moduleItems, li)
 		} else if li.ExportDeclaration != nil {
 			ed := li.ExportDeclaration
 			if ed.VariableStatement != nil {
-				statementList = append(statementList, javascript.StatementListItem{
-					Statement: &javascript.Statement{
-						VariableStatement: ed.VariableStatement,
+				moduleItems = append(moduleItems, javascript.ModuleItem{
+					StatementListItem: &javascript.StatementListItem{
+						Statement: &javascript.Statement{
+							VariableStatement: ed.VariableStatement,
+						},
 					},
 				})
 			} else if ed.Declaration != nil {
-				statementList = append(statementList, javascript.StatementListItem{
-					Declaration: ed.Declaration,
+				moduleItems = append(moduleItems, javascript.ModuleItem{
+					StatementListItem: &javascript.StatementListItem{
+						Declaration: ed.Declaration,
+					},
 				})
 			} else if ed.DefaultFunction != nil {
 				if ed.DefaultFunction.BindingIdentifier != nil {
-					statementList = append(statementList, javascript.StatementListItem{
-						Declaration: &javascript.Declaration{
-							FunctionDeclaration: ed.DefaultFunction,
+					moduleItems = append(moduleItems, javascript.ModuleItem{
+						StatementListItem: &javascript.StatementListItem{
+							Declaration: &javascript.Declaration{
+								FunctionDeclaration: ed.DefaultFunction,
+							},
 						},
 					})
 				}
 			} else if ed.DefaultClass != nil {
 				if ed.DefaultClass.BindingIdentifier != nil {
-					statementList = append(statementList, javascript.StatementListItem{
-						Declaration: &javascript.Declaration{
-							ClassDeclaration: ed.DefaultClass,
+					moduleItems = append(moduleItems, javascript.ModuleItem{
+						StatementListItem: &javascript.StatementListItem{
+							Declaration: &javascript.Declaration{
+								ClassDeclaration: ed.DefaultClass,
+							},
 						},
 					})
 				}
 			} else if ed.DefaultAssignmentExpression != nil {
-				statementList = append(statementList, javascript.StatementListItem{
-					Statement: &javascript.Statement{
-						ExpressionStatement: &javascript.Expression{
-							Expressions: []javascript.AssignmentExpression{
-								*ed.DefaultAssignmentExpression,
+				moduleItems = append(moduleItems, javascript.ModuleItem{
+					StatementListItem: &javascript.StatementListItem{
+						Statement: &javascript.Statement{
+							ExpressionStatement: &javascript.Expression{
+								Expressions: []javascript.AssignmentExpression{
+									*ed.DefaultAssignmentExpression,
+								},
 							},
 						},
 					},
@@ -351,33 +364,35 @@ func Plugin(m *javascript.Module, url string) (*javascript.Script, error) {
 	d.processBindings(scope)
 
 	if imports == 0 {
-		statementList = statementList[1:]
+		moduleItems = moduleItems[1:]
 	} else if imports == 1 {
-		statementList[0] = javascript.StatementListItem{
-			Declaration: &javascript.Declaration{
-				LexicalDeclaration: &javascript.LexicalDeclaration{
-					LetOrConst: javascript.Const,
-					BindingList: []javascript.LexicalBinding{
-						{
-							BindingIdentifier: importObjectBindings[0].SingleNameBinding,
-							Initializer: &javascript.AssignmentExpression{
-								ConditionalExpression: javascript.WrapConditional(&javascript.UnaryExpression{
-									UnaryOperators: []javascript.UnaryOperator{javascript.UnaryAwait},
-									UpdateExpression: javascript.UpdateExpression{
-										LeftHandSideExpression: &javascript.LeftHandSideExpression{
-											CallExpression: &javascript.CallExpression{
-												MemberExpression: &javascript.MemberExpression{
-													PrimaryExpression: &javascript.PrimaryExpression{
-														IdentifierReference: jToken("include"),
+		moduleItems[0] = javascript.ModuleItem{
+			StatementListItem: &javascript.StatementListItem{
+				Declaration: &javascript.Declaration{
+					LexicalDeclaration: &javascript.LexicalDeclaration{
+						LetOrConst: javascript.Const,
+						BindingList: []javascript.LexicalBinding{
+							{
+								BindingIdentifier: importObjectBindings[0].SingleNameBinding,
+								Initializer: &javascript.AssignmentExpression{
+									ConditionalExpression: javascript.WrapConditional(&javascript.UnaryExpression{
+										UnaryOperators: []javascript.UnaryOperator{javascript.UnaryAwait},
+										UpdateExpression: javascript.UpdateExpression{
+											LeftHandSideExpression: &javascript.LeftHandSideExpression{
+												CallExpression: &javascript.CallExpression{
+													MemberExpression: &javascript.MemberExpression{
+														PrimaryExpression: &javascript.PrimaryExpression{
+															IdentifierReference: jToken("include"),
+														},
 													},
-												},
-												Arguments: &javascript.Arguments{
-													ArgumentList: importURLsArray,
+													Arguments: &javascript.Arguments{
+														ArgumentList: importURLsArray,
+													},
 												},
 											},
 										},
-									},
-								}),
+									}),
+								},
 							},
 						},
 					},
@@ -385,64 +400,66 @@ func Plugin(m *javascript.Module, url string) (*javascript.Script, error) {
 			},
 		}
 	} else {
-		statementList[0] = javascript.StatementListItem{
-			Declaration: &javascript.Declaration{
-				LexicalDeclaration: &javascript.LexicalDeclaration{
-					LetOrConst: javascript.Const,
-					BindingList: []javascript.LexicalBinding{
-						{
-							ArrayBindingPattern: &javascript.ArrayBindingPattern{
-								BindingElementList: importObjectBindings,
-							},
-							Initializer: &javascript.AssignmentExpression{
-								ConditionalExpression: javascript.WrapConditional(&javascript.UnaryExpression{
-									UnaryOperators: []javascript.UnaryOperator{javascript.UnaryAwait},
-									UpdateExpression: javascript.UpdateExpression{
-										LeftHandSideExpression: &javascript.LeftHandSideExpression{
-											CallExpression: &javascript.CallExpression{
-												MemberExpression: &javascript.MemberExpression{
+		moduleItems[0] = javascript.ModuleItem{
+			StatementListItem: &javascript.StatementListItem{
+				Declaration: &javascript.Declaration{
+					LexicalDeclaration: &javascript.LexicalDeclaration{
+						LetOrConst: javascript.Const,
+						BindingList: []javascript.LexicalBinding{
+							{
+								ArrayBindingPattern: &javascript.ArrayBindingPattern{
+									BindingElementList: importObjectBindings,
+								},
+								Initializer: &javascript.AssignmentExpression{
+									ConditionalExpression: javascript.WrapConditional(&javascript.UnaryExpression{
+										UnaryOperators: []javascript.UnaryOperator{javascript.UnaryAwait},
+										UpdateExpression: javascript.UpdateExpression{
+											LeftHandSideExpression: &javascript.LeftHandSideExpression{
+												CallExpression: &javascript.CallExpression{
 													MemberExpression: &javascript.MemberExpression{
-														PrimaryExpression: &javascript.PrimaryExpression{
-															IdentifierReference: jToken("Promise"),
+														MemberExpression: &javascript.MemberExpression{
+															PrimaryExpression: &javascript.PrimaryExpression{
+																IdentifierReference: jToken("Promise"),
+															},
 														},
+														IdentifierName: jToken("all"),
 													},
-													IdentifierName: jToken("all"),
-												},
-												Arguments: &javascript.Arguments{
-													ArgumentList: []javascript.Argument{
-														{
-															AssignmentExpression: javascript.AssignmentExpression{
-																ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
-																	MemberExpression: &javascript.MemberExpression{
+													Arguments: &javascript.Arguments{
+														ArgumentList: []javascript.Argument{
+															{
+																AssignmentExpression: javascript.AssignmentExpression{
+																	ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
 																		MemberExpression: &javascript.MemberExpression{
-																			PrimaryExpression: &javascript.PrimaryExpression{
-																				ArrayLiteral: &javascript.ArrayLiteral{
-																					ElementList: importURLsArrayE,
+																			MemberExpression: &javascript.MemberExpression{
+																				PrimaryExpression: &javascript.PrimaryExpression{
+																					ArrayLiteral: &javascript.ArrayLiteral{
+																						ElementList: importURLsArrayE,
+																					},
+																				},
+																			},
+																			IdentifierName: jToken("map"),
+																		},
+																		Arguments: &javascript.Arguments{
+																			ArgumentList: []javascript.Argument{
+																				{
+																					AssignmentExpression: javascript.AssignmentExpression{
+																						ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+																							IdentifierReference: jToken("include"),
+																						}),
+																					},
 																				},
 																			},
 																		},
-																		IdentifierName: jToken("map"),
-																	},
-																	Arguments: &javascript.Arguments{
-																		ArgumentList: []javascript.Argument{
-																			{
-																				AssignmentExpression: javascript.AssignmentExpression{
-																					ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																						IdentifierReference: jToken("include"),
-																					}),
-																				},
-																			},
-																		},
-																	},
-																}),
+																	}),
+																},
 															},
 														},
 													},
 												},
 											},
 										},
-									},
-								}),
+									}),
+								},
 							},
 						},
 					},
@@ -451,8 +468,8 @@ func Plugin(m *javascript.Module, url string) (*javascript.Script, error) {
 		}
 	}
 
-	s := &javascript.Script{
-		StatementList: statementList,
+	s := &javascript.Module{
+		ModuleListItems: moduleItems,
 	}
 
 	walk.Walk(s, &d)
