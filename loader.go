@@ -49,7 +49,6 @@ func (c *config) makeLoader() error {
 		exportArr := &javascript.ArrayLiteral{
 			ElementList: make([]javascript.ArrayElement, 0, len(c.filesDone)),
 		}
-
 		urls := make([]string, 0, len(c.filesDone))
 		imports := jToken("imports")
 		importsGet := &javascript.MemberExpression{
@@ -81,7 +80,6 @@ func (c *config) makeLoader() error {
 					}),
 				},
 			})
-
 			props := make([]string, 0, len(d.exports))
 
 			for prop := range d.exports {
