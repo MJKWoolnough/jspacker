@@ -39,7 +39,6 @@ func id2String(id uint) string {
 	for id > 0 {
 		n--
 		id--
-
 		p[n] = 'a' + byte(id%26)
 		id /= 26
 	}
@@ -53,10 +52,10 @@ func (d *dependency) addDepImport(url string) (*dependency, error) {
 
 func (d *dependency) addImport(url string, primary bool) (*dependency, error) {
 	c := d.config
+
 	e, ok := c.filesDone[url]
 	if !ok {
 		c.nextID++
-
 		id := c.nextID
 		e = &dependency{
 			config:   c,
@@ -383,7 +382,6 @@ func (d *dependency) Handle(t javascript.Type) error {
 				IdentifierReference: jToken("include"),
 			},
 		}
-
 		ce.Arguments = &javascript.Arguments{
 			ArgumentList: []javascript.Argument{
 				{
@@ -391,7 +389,6 @@ func (d *dependency) Handle(t javascript.Type) error {
 				},
 			},
 		}
-
 		ce.ImportCall = nil
 	} else if ok && ce.MemberExpression != nil && ce.MemberExpression.PrimaryExpression != nil && ce.MemberExpression.PrimaryExpression.IdentifierReference != nil && ce.MemberExpression.PrimaryExpression.IdentifierReference.Data == "include" && ce.MemberExpression.MemberExpression == nil && ce.MemberExpression.Expression == nil && ce.MemberExpression.IdentifierName == nil && ce.MemberExpression.TemplateLiteral == nil && !ce.MemberExpression.SuperProperty && !ce.MemberExpression.NewTarget && !ce.MemberExpression.ImportMeta && ce.MemberExpression.Arguments == nil && !ce.SuperCall && ce.ImportCall == nil && ce.Arguments != nil && ce.Expression == nil && ce.IdentifierName == nil && ce.TemplateLiteral == nil && len(ce.Arguments.ArgumentList) == 1 {
 		d.HandleImportConditional(ce.Arguments.ArgumentList[0].AssignmentExpression.ConditionalExpression)
