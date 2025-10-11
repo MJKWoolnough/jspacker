@@ -1,75 +1,91 @@
 # jspacker
+
+[![CI](https://github.com/MJKWoolnough/jspacker/actions/workflows/go-checks.yml/badge.svg)](https://github.com/MJKWoolnough/jspacker/actions)
+[![Go Reference](https://pkg.go.dev/badge/vimagination.zapto.org/jspacker.svg)](https://pkg.go.dev/vimagination.zapto.org/jspacker)
+[![Go Report Card](https://goreportcard.com/badge/vimagination.zapto.org/jspacker)](https://goreportcard.com/report/vimagination.zapto.org/jspacker)
+
 --
     import "vimagination.zapto.org/jspacker"
 
 Package jspacker is a javascript packer for javascript projects.
 
+## Highlights
+
+ - Combine multiple Javascript/Typescript modules into a single file.
+ - Optional ability to allow dynamic imports.
+ - Can create separate plugin scripts that can import from primary script.
+
 ## Usage
 
 ```go
-var (
-	ErrInvalidExport = errors.New("invalid export")
-	ErrNoFiles       = errors.New("no files")
-	ErrInvalidURL    = errors.New("added files must be absolute URLs")
+package main
+
+import (
+	"fmt"
+	"io/fs"
+
+	"vimagination.zapto.org/javascript"
+	"vimagination.zapto.org/jspacker"
+	"vimagination.zapto.org/parser"
 )
-```
-Errors.
 
-#### func  NoExports
+func main() {
+	files := map[string]string{
+		"/main.js":      `import fn from './lib/utils.js'; const v = 2; console.log(v + fn())`,
+		"/lib/utils.js": "export default () => 1;",
+	}
+	loader := func(file string) (*javascript.Module, error) {
+		src, ok := files[file]
+		if !ok {
+			return nil, fs.ErrNotExist
+		}
 
-```go
-func NoExports(c *config)
-```
-NoExports disables the creation of exports for any potential plugins.
+		tk := parser.NewStringTokeniser(src)
 
-#### func  OSLoad
+		return javascript.ParseModule(&tk)
+	}
 
-```go
-func OSLoad(base string) func(string) (*javascript.Module, error)
-```
-OSLoad is the default loader for Package, with the base set to CWD.
+	script, err := jspacker.Package(jspacker.File("/main.js"), jspacker.NoExports, jspacker.Loader(loader))
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Printf("%s", script)
+	}
 
-#### func  Package
-
-```go
-func Package(opts ...Option) (*javascript.Script, error)
-```
-Package packages up multiple javascript modules into a single file, renaming
-bindings to simulate imports.
-
-#### func  ParseDynamic
-
-```go
-func ParseDynamic(c *config)
-```
-ParseDynamic turns on dynamic import/include parsing.
-
-#### func  Plugin
-
-```go
-func Plugin(m *javascript.Module, url string) (*javascript.Script, error)
-```
-Plugin converts a single javascript module to make use of the processed exports
-from package.
-
-#### type Option
-
-```go
-type Option func(*config)
+	// Output:
+	// const b_default = () => 1;
+	//
+	// const a_v = 2;
+	//
+	// console.log(a_v + b_default());
+}
 ```
 
-Option in a type that can be passed to Package to set an option.
+## Command
 
-#### func  File
+Includes command `vimagination.zapto.org/jspacker/cmd/jspacker` to combine multiple Javascript or Typescript files:
 
-```go
-func File(url string) Option
+The `jspacker` command accepts the following flags
+
 ```
-File is an Option that specifies a starting file for Package.
-
-#### func  Loader
-
-```go
-func Loader(l func(string) (*javascript.Module, error)) Option
+  -b string     js base dir
+  -e            keep primary file exports
+  -i value      input file
+  -n            no exports
+  -o string     output file (default "-")
+  -p            export file as plugin
 ```
-Loader sets the func that will take URLs and produce a parsed module.
+
+### Command Example
+
+The following command will bundle `main.ts` and all of its imports into a single file, `combined.js`.
+
+```bash
+jspacker -i /main.ts -n -o combined.js
+```
+
+## Documentation
+
+Full API docs can be found at:
+
+https://pkg.go.dev/vimagination.zapto.org/jspacker
