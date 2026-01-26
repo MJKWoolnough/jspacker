@@ -7,13 +7,13 @@
 --
     import "vimagination.zapto.org/jspacker"
 
-Package jspacker is a javascript packer for javascript projects.
+Package jspacker is a JavaScript packer for JavaScript projects.
 
 ## Highlights
 
- - Combine multiple Javascript/Typescript modules into a single file.
+ - Combine multiple JavaScript/Typescript modules into a single file.
  - Optional ability to allow dynamic imports.
- - Can create separate plugin scripts that can import from primary script.
+ - Can create separate plug-in scripts that can import from primary script.
 
 ## Usage
 
@@ -63,7 +63,7 @@ func main() {
 
 ## Command
 
-Includes command `vimagination.zapto.org/jspacker/cmd/jspacker` to combine multiple Javascript or Typescript files:
+Includes command `vimagination.zapto.org/jspacker/cmd/jspacker` to combine multiple JavaScript or Typescript files:
 
 The `jspacker` command accepts the following flags
 
