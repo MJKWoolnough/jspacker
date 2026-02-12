@@ -124,7 +124,7 @@ func (d *dependency) process() error {
 										BindingIdentifier: li.ImportDeclaration.NameSpaceImport,
 										Initializer: &javascript.AssignmentExpression{
 											ConditionalExpression: javascript.WrapConditional(javascript.UnaryExpression{
-												UnaryOperators: []javascript.UnaryOperator{javascript.UnaryAwait},
+												UnaryOperators: []javascript.UnaryOperatorComments{{UnaryOperator: javascript.UnaryAwait}},
 												UpdateExpression: javascript.UpdateExpression{
 													LeftHandSideExpression: &javascript.LeftHandSideExpression{
 														CallExpression: &javascript.CallExpression{

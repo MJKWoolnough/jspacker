@@ -376,7 +376,7 @@ func Plugin(m *javascript.Module, url string) (*javascript.Module, error) {
 								BindingIdentifier: importObjectBindings[0].SingleNameBinding,
 								Initializer: &javascript.AssignmentExpression{
 									ConditionalExpression: javascript.WrapConditional(&javascript.UnaryExpression{
-										UnaryOperators: []javascript.UnaryOperator{javascript.UnaryAwait},
+										UnaryOperators: []javascript.UnaryOperatorComments{{UnaryOperator: javascript.UnaryAwait}},
 										UpdateExpression: javascript.UpdateExpression{
 											LeftHandSideExpression: &javascript.LeftHandSideExpression{
 												CallExpression: &javascript.CallExpression{
@@ -412,7 +412,7 @@ func Plugin(m *javascript.Module, url string) (*javascript.Module, error) {
 								},
 								Initializer: &javascript.AssignmentExpression{
 									ConditionalExpression: javascript.WrapConditional(&javascript.UnaryExpression{
-										UnaryOperators: []javascript.UnaryOperator{javascript.UnaryAwait},
+										UnaryOperators: []javascript.UnaryOperatorComments{{UnaryOperator: javascript.UnaryAwait}},
 										UpdateExpression: javascript.UpdateExpression{
 											LeftHandSideExpression: &javascript.LeftHandSideExpression{
 												CallExpression: &javascript.CallExpression{
