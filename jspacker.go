@@ -18,6 +18,7 @@ import (
 type config struct {
 	filesToDo     []string
 	filesDone     map[string]*dependency
+	resolveURL    func(string, string) string
 	loader        func(string) (*javascript.Module, error)
 	bare          bool
 	parseDynamic  bool
@@ -132,6 +133,7 @@ func Package(opts ...Option) (*javascript.Module, error) {
 		dependency: dependency{
 			requires: make(map[string]*dependency),
 		},
+		resolveURL: RelTo,
 	}
 
 	if c.loader == nil {

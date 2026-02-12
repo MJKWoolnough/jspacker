@@ -428,11 +428,15 @@ func (d *dependency) HandleImportConditional(ce *javascript.ConditionalExpressio
 }
 
 func (d *dependency) RelTo(url string) string {
-	if len(url) > 0 && url[0] == '/' {
-		return url
+	return d.config.resolveURL(d.url, url)
+}
+
+func RelTo(from, to string) string {
+	if len(to) > 0 && to[0] == '/' {
+		return to
 	}
 
-	return path.Join(path.Dir(d.url), url)
+	return path.Join(path.Dir(from), to)
 }
 
 func (d *dependency) setImportBinding(binding string, e *dependency, importedBinding string) {
