@@ -234,6 +234,9 @@ func Plugin(m *javascript.Module, url string) (*javascript.Module, error) {
 		importURLsArray      []javascript.Argument
 		moduleItems          = make([]javascript.ModuleItem, 1, len(m.ModuleListItems))
 		d                    = dependency{
+			config: &config{
+				resolveURL: RelTo,
+			},
 			url:    url,
 			prefix: "_",
 		}
