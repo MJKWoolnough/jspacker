@@ -33,3 +33,9 @@ func ParseDynamic(c *config) {
 func PrimaryExports(c *config) {
 	c.primary = true
 }
+
+func ResolveURL(fn func(from, to string) string) Option {
+	return func(c *config) {
+		c.resolveURL = fn
+	}
+}
