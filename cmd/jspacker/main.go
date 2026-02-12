@@ -1,12 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"vimagination.zapto.org/javascript"
 	"vimagination.zapto.org/jspacker"
@@ -31,11 +35,68 @@ func main() {
 	}
 }
 
+type importMap map[string]string
+
+func (i importMap) Set(v string) error {
+	if v == "-" {
+		return i.Import(os.Stdin)
+	} else if strings.HasPrefix(v, "@") {
+		k, v, ok := strings.Cut(v, "=")
+		if !ok {
+			return ErrInvalidImportMapping
+		}
+
+		i[k] = v
+	} else {
+		f, err := os.Open(v)
+		if err != nil {
+			return fmt.Errorf("failed to open import map: %w", err)
+		}
+
+		if err := i.Import(f); err != nil {
+			return err
+		}
+
+		return f.Close()
+	}
+
+	return nil
+}
+
+func (i importMap) Import(r io.Reader) error {
+	var im struct {
+		Imports map[string]string
+	}
+
+	if err := json.NewDecoder(os.Stdin).Decode(&im); err != nil {
+		return err
+	}
+
+	maps.Copy(i, im.Imports)
+
+	return nil
+}
+
+func (i importMap) String() string {
+	b, _ := json.Marshal(i)
+
+	return string(b)
+}
+
+func (i importMap) Resolve(from, to string) string {
+	if m, ok := i[to]; ok {
+		return jspacker.RelTo("/", m)
+	}
+
+	return jspacker.RelTo(from, to)
+}
+
 func run() error {
 	var (
 		output, base               string
 		filesTodo                  Inputs
 		plugin, noExports, exports bool
+		importMap                  = make(importMap)
 		err                        error
 	)
 
@@ -45,6 +106,7 @@ func run() error {
 	flag.BoolVar(&plugin, "p", false, "export file as plugin")
 	flag.BoolVar(&noExports, "n", false, "no exports")
 	flag.BoolVar(&exports, "e", false, "keep primary file exports")
+	flag.Var(importMap, "m", "import map used to resolve import URLs; can be specified as a JSON file or as individual KEY=VALUE pairs")
 	flag.Parse()
 
 	if plugin && len(filesTodo) != 1 {
@@ -88,8 +150,12 @@ func run() error {
 			return fmt.Errorf("error processing javascript plugin: %w", err)
 		}
 	} else {
-		args := make([]jspacker.Option, 1, len(filesTodo)+3)
+		args := make([]jspacker.Option, 1, len(filesTodo)+4)
 		args[0] = jspacker.ParseDynamic
+
+		if len(importMap) > 0 {
+			args = append(args, jspacker.ResolveURL(importMap.Resolve))
+		}
 
 		if base != "" {
 			args = append(args, jspacker.Loader(jspacker.OSLoad(base)))
@@ -132,3 +198,5 @@ func run() error {
 
 	return nil
 }
+
+var ErrInvalidImportMapping = errors.New("invalid import mapping")
