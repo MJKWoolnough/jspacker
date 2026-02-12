@@ -14,6 +14,7 @@ Package jspacker is a JavaScript packer for JavaScript projects.
  - Combine multiple JavaScript/Typescript modules into a single file.
  - Optional ability to allow dynamic imports.
  - Can create separate plug-in scripts that can import from primary script.
+ - Option functions can be used to alter behaviour of import resolution and other features.
 
 ## Usage
 
