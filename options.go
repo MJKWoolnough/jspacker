@@ -34,6 +34,10 @@ func PrimaryExports(c *config) {
 	c.primary = true
 }
 
+// ResolveURL allows for custom import URL resolution.
+//
+// The function imputs are the the URL for the current module and the import URL
+// that needs resolving.
 func ResolveURL(fn func(from, to string) string) Option {
 	return func(c *config) {
 		c.resolveURL = fn
