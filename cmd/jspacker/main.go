@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"flag"
 	"fmt"
@@ -91,9 +92,20 @@ func (i importMap) Resolve(from, to string) string {
 	return jspacker.RelTo(from, to)
 }
 
+type Script struct {
+	Type string `xml:"type,attr"`
+	Data string `xml:",chardata"`
+}
+
+type htmlPage struct {
+	Head struct {
+		Scripts []Script `xml:"script"`
+	} `xml:"head"`
+}
+
 func run() error {
 	var (
-		output, base               string
+		output, base, html         string
 		filesTodo                  Inputs
 		plugin, noExports, exports bool
 		importMap                  = make(importMap)
@@ -107,6 +119,7 @@ func run() error {
 	flag.BoolVar(&noExports, "n", false, "no exports")
 	flag.BoolVar(&exports, "e", false, "keep primary file exports")
 	flag.Var(importMap, "m", "import map used to resolve import URLs; can be specified as a JSON file or as individual KEY=VALUE pairs")
+	flag.StringVar(&html, "H", "", "parse import map from HTML file")
 	flag.Parse()
 
 	if plugin && len(filesTodo) != 1 {
@@ -128,6 +141,34 @@ func run() error {
 	base, err = filepath.Abs(base)
 	if err != nil {
 		return fmt.Errorf("error getting absolute path for base: %w", err)
+	}
+
+	if html != "" {
+		f, err := os.Open(html)
+		if err != nil {
+			return err
+		}
+
+		defer f.Close()
+
+		html := xml.NewDecoder(f)
+		html.Strict = false
+		html.AutoClose = xml.HTMLAutoClose
+		html.Entity = xml.HTMLEntity
+
+		var h htmlPage
+
+		if err := html.Decode(&h); err != nil {
+			return err
+		}
+
+		for _, s := range h.Head.Scripts {
+			if s.Type == "importmap" {
+				if err := importMap.Import(strings.NewReader(s.Data)); err != nil {
+					return err
+				}
+			}
+		}
 	}
 
 	var s *javascript.Module
