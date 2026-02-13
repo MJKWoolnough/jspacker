@@ -122,7 +122,7 @@ func run() error {
 		if s, err = readPlugin(config.base, config.filesTodo[0]); err != nil {
 			return err
 		}
-	} else if s, err = readModuleWithOptions(config.filesTodo, config.importMap, config.base, config.noExports, config.exports); err != nil {
+	} else if s, err = readModuleWithOptions(config); err != nil {
 		return err
 	}
 
@@ -216,6 +216,33 @@ func (c *Config) readImportsFromHTML() error {
 	return nil
 }
 
+func (c *Config) Options() []jspacker.Option {
+	options := make([]jspacker.Option, 1, len(c.filesTodo)+4)
+	options[0] = jspacker.ParseDynamic
+
+	if len(c.importMap) > 0 {
+		options = append(options, jspacker.ResolveURL(c.importMap.Resolve))
+	}
+
+	if c.base != "" {
+		options = append(options, jspacker.Loader(jspacker.OSLoad(c.base)))
+	}
+
+	if c.noExports {
+		options = append(options, jspacker.NoExports)
+	}
+
+	if c.exports {
+		options = append(options, jspacker.PrimaryExports)
+	}
+
+	for _, f := range c.filesTodo {
+		options = append(options, jspacker.File(f))
+	}
+
+	return options
+}
+
 func readPlugin(base, input string) (*javascript.Module, error) {
 	f, err := os.Open(filepath.Join(base, filepath.FromSlash(input)))
 	if err != nil {
@@ -239,31 +266,8 @@ func readPlugin(base, input string) (*javascript.Module, error) {
 	return s, nil
 }
 
-func readModuleWithOptions(filesTodo []string, importMap importMap, base string, noExports, exports bool) (*javascript.Module, error) {
-	args := make([]jspacker.Option, 1, len(filesTodo)+4)
-	args[0] = jspacker.ParseDynamic
-
-	if len(importMap) > 0 {
-		args = append(args, jspacker.ResolveURL(importMap.Resolve))
-	}
-
-	if base != "" {
-		args = append(args, jspacker.Loader(jspacker.OSLoad(base)))
-	}
-
-	if noExports {
-		args = append(args, jspacker.NoExports)
-	}
-
-	if exports {
-		args = append(args, jspacker.PrimaryExports)
-	}
-
-	for _, f := range filesTodo {
-		args = append(args, jspacker.File(f))
-	}
-
-	s, err := jspacker.Package(args...)
+func readModuleWithOptions(c *Config) (*javascript.Module, error) {
+	s, err := jspacker.Package(c.Options()...)
 	if err != nil {
 		return nil, fmt.Errorf("error generating output: %w", err)
 	}
