@@ -273,9 +273,9 @@ func readPlugin(base, input string) (*javascript.Module, error) {
 	var s *javascript.Module
 
 	if err != nil {
-		return nil, fmt.Errorf("error parsing javascript module: %w", err)
+		return nil, fmt.Errorf("error parsing JavaScript module: %w", err)
 	} else if s, err = jspacker.Plugin(m, input); err != nil {
-		return nil, fmt.Errorf("error processing javascript plugin: %w", err)
+		return nil, fmt.Errorf("error processing JavaScript plugin: %w", err)
 	}
 
 	return s, nil
