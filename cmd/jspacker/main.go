@@ -18,6 +18,13 @@ import (
 	"vimagination.zapto.org/parser"
 )
 
+type Config struct {
+	output, base, html         string
+	filesTodo                  Inputs
+	plugin, noExports, exports bool
+	importMap                  importMap
+}
+
 type Inputs []string
 
 func (i *Inputs) Set(v string) error {
@@ -104,6 +111,29 @@ type htmlPage struct {
 }
 
 func run() error {
+	config, err := parseConfig()
+	if err != nil {
+		return err
+	}
+
+	var s *javascript.Module
+
+	if plugin {
+		if s, err = readPlugin(base, filesTodo[0]); err != nil {
+			return err
+		}
+	} else if s, err = readModuleWithOptions(filesTodo, importMap, base, noExports, exports); err != nil {
+		return err
+	}
+
+	for len(s.ModuleListItems) > 0 && s.ModuleListItems[0].ImportDeclaration == nil && s.ModuleListItems[0].ExportDeclaration == nil && s.ModuleListItems[0].StatementListItem == nil {
+		s.ModuleListItems = s.ModuleListItems[1:]
+	}
+
+	return outputJS(output, s)
+}
+
+func parseConfig() (*Config, error) {
 	var (
 		output, base, html         string
 		filesTodo                  Inputs
@@ -123,7 +153,7 @@ func run() error {
 	flag.Parse()
 
 	if plugin && len(filesTodo) != 1 {
-		return errors.New("plugin mode requires a single file")
+		return nil, errors.New("plugin mode requires a single file")
 	}
 
 	if output == "" {
@@ -140,30 +170,16 @@ func run() error {
 
 	base, err = filepath.Abs(base)
 	if err != nil {
-		return fmt.Errorf("error getting absolute path for base: %w", err)
+		return nil, fmt.Errorf("error getting absolute path for base: %w", err)
 	}
 
 	if html != "" {
 		if err := readImportsFromHTML(html, importMap); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	var s *javascript.Module
-
-	if plugin {
-		if s, err = readPlugin(base, filesTodo[0]); err != nil {
-			return err
-		}
-	} else if s, err = readModuleWithOptions(filesTodo, importMap, base, noExports, exports); err != nil {
-		return err
-	}
-
-	for len(s.ModuleListItems) > 0 && s.ModuleListItems[0].ImportDeclaration == nil && s.ModuleListItems[0].ExportDeclaration == nil && s.ModuleListItems[0].StatementListItem == nil {
-		s.ModuleListItems = s.ModuleListItems[1:]
-	}
-
-	return outputJS(output, s)
+	return &Config{}, nil
 }
 
 func readImportsFromHTML(html string, importMap importMap) error {
