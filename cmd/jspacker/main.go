@@ -23,7 +23,7 @@ type Config struct {
 	output, base, html         string
 	filesTodo                  Inputs
 	plugin, noExports, exports bool
-	importMap                  importMap
+	importMap                  ImportMap
 	minifier                   Minifier
 }
 
@@ -45,9 +45,9 @@ func main() {
 	}
 }
 
-type importMap map[string]string
+type ImportMap map[string]string
 
-func (i importMap) Set(v string) error {
+func (i ImportMap) Set(v string) error {
 	if v == "-" {
 		return i.Import(os.Stdin)
 	} else if strings.HasPrefix(v, "@") {
@@ -73,7 +73,7 @@ func (i importMap) Set(v string) error {
 	return nil
 }
 
-func (i importMap) Import(r io.Reader) error {
+func (i ImportMap) Import(r io.Reader) error {
 	var im struct {
 		Imports map[string]string
 	}
@@ -87,13 +87,13 @@ func (i importMap) Import(r io.Reader) error {
 	return nil
 }
 
-func (i importMap) String() string {
+func (i ImportMap) String() string {
 	b, _ := json.Marshal(i)
 
 	return string(b)
 }
 
-func (i importMap) Resolve(from, to string) string {
+func (i ImportMap) Resolve(from, to string) string {
 	if m, ok := i[to]; ok {
 		return jspacker.RelTo("/", m)
 	}
@@ -148,7 +148,7 @@ func run() error {
 }
 
 func parseConfig() (*Config, error) {
-	config := &Config{importMap: make(importMap)}
+	config := &Config{importMap: make(ImportMap)}
 
 	flag.Var(&config.filesTodo, "i", "input file")
 	flag.StringVar(&config.output, "o", "-", "output file")
