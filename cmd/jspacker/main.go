@@ -9,6 +9,7 @@ import (
 	"io"
 	"maps"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -23,6 +24,7 @@ type Config struct {
 	filesTodo                  Inputs
 	plugin, noExports, exports bool
 	importMap                  importMap
+	minifier                   Minifier
 }
 
 type Inputs []string
@@ -99,6 +101,18 @@ func (i importMap) Resolve(from, to string) string {
 	return jspacker.RelTo(from, to)
 }
 
+type Minifier []string
+
+func (m *Minifier) Set(v string) error {
+	return json.Unmarshal([]byte(v), m)
+}
+
+func (m *Minifier) String() string {
+	b, _ := json.Marshal(m)
+
+	return string(b)
+}
+
 type Script struct {
 	Type string `xml:"type,attr"`
 	Data string `xml:",chardata"`
@@ -130,7 +144,7 @@ func run() error {
 		s.ModuleListItems = s.ModuleListItems[1:]
 	}
 
-	return outputJS(config.output, s)
+	return outputJS(config, s)
 }
 
 func parseConfig() (*Config, error) {
@@ -144,6 +158,7 @@ func parseConfig() (*Config, error) {
 	flag.BoolVar(&config.exports, "e", false, "keep primary file exports")
 	flag.Var(config.importMap, "m", "import map used to resolve import URLs; can be specified as a JSON file or as individual KEY=VALUE pairs")
 	flag.StringVar(&config.html, "H", "", "parse import map from HTML file")
+	flag.Var(&config.minifier, "M", "minifier to pass code through, specified as JSON array of command words; e.g [\"terser\", \"-m\"]")
 	flag.Parse()
 
 	if config.plugin && len(config.filesTodo) != 1 {
@@ -275,22 +290,49 @@ func readModuleWithOptions(c *Config) (*javascript.Module, error) {
 	return s, nil
 }
 
-func outputJS(output string, s *javascript.Module) error {
-	var (
-		of  *os.File
-		err error
-	)
+func outputJS(c *Config, s *javascript.Module) (err error) {
+	var f *os.File
 
-	if output == "-" {
-		of = os.Stdout
-	} else if of, err = os.Create(output); err != nil {
+	if c.output == "-" {
+		f = os.Stdout
+	} else if f, err = os.Create(c.output); err != nil {
 		return fmt.Errorf("error creating output file: %w", err)
 	}
 
-	if _, err = fmt.Fprintf(of, "%+s\n", s); err != nil {
+	var wait func() error
+
+	if len(c.minifier) > 0 {
+		pr, pw, errr := os.Pipe()
+		if err != nil {
+			return errr
+		}
+
+		cmd := exec.Command(c.minifier[0], c.minifier[1:]...)
+		cmd.Stdin = pr
+		cmd.Stdout = f
+
+		of := f
+		f = pw
+
+		defer func() {
+			if errr := of.Close(); err == nil {
+				err = errr
+			}
+		}()
+
+		if err = cmd.Start(); err != nil {
+			return err
+		}
+
+		wait = cmd.Wait
+	}
+
+	if _, err = fmt.Fprintf(f, "%+s\n", s); err != nil {
 		return fmt.Errorf("error writing to output: %w", err)
-	} else if err = of.Close(); err != nil {
+	} else if err = f.Close(); err != nil {
 		return fmt.Errorf("error closing output: %w", err)
+	} else if err = wait(); err != nil {
+		return err
 	}
 
 	return nil
