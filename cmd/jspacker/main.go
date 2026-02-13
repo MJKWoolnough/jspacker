@@ -118,11 +118,11 @@ func run() error {
 
 	var s *javascript.Module
 
-	if plugin {
-		if s, err = readPlugin(base, filesTodo[0]); err != nil {
+	if config.plugin {
+		if s, err = readPlugin(config.base, config.filesTodo[0]); err != nil {
 			return err
 		}
-	} else if s, err = readModuleWithOptions(filesTodo, importMap, base, noExports, exports); err != nil {
+	} else if s, err = readModuleWithOptions(config.filesTodo, config.importMap, config.base, config.noExports, config.exports); err != nil {
 		return err
 	}
 
@@ -130,56 +130,51 @@ func run() error {
 		s.ModuleListItems = s.ModuleListItems[1:]
 	}
 
-	return outputJS(output, s)
+	return outputJS(config.output, s)
 }
 
 func parseConfig() (*Config, error) {
-	var (
-		output, base, html         string
-		filesTodo                  Inputs
-		plugin, noExports, exports bool
-		importMap                  = make(importMap)
-		err                        error
-	)
+	config := &Config{importMap: make(importMap)}
+	var err error
 
-	flag.Var(&filesTodo, "i", "input file")
-	flag.StringVar(&output, "o", "-", "output file")
-	flag.StringVar(&base, "b", "", "js base dir")
-	flag.BoolVar(&plugin, "p", false, "export file as plugin")
-	flag.BoolVar(&noExports, "n", false, "no exports")
-	flag.BoolVar(&exports, "e", false, "keep primary file exports")
-	flag.Var(importMap, "m", "import map used to resolve import URLs; can be specified as a JSON file or as individual KEY=VALUE pairs")
-	flag.StringVar(&html, "H", "", "parse import map from HTML file")
+	flag.Var(&config.filesTodo, "i", "input file")
+	flag.StringVar(&config.output, "o", "-", "output file")
+	flag.StringVar(&config.base, "b", "", "js base dir")
+	flag.BoolVar(&config.plugin, "p", false, "export file as plugin")
+	flag.BoolVar(&config.noExports, "n", false, "no exports")
+	flag.BoolVar(&config.exports, "e", false, "keep primary file exports")
+	flag.Var(config.importMap, "m", "import map used to resolve import URLs; can be specified as a JSON file or as individual KEY=VALUE pairs")
+	flag.StringVar(&config.html, "H", "", "parse import map from HTML file")
 	flag.Parse()
 
-	if plugin && len(filesTodo) != 1 {
+	if config.plugin && len(config.filesTodo) != 1 {
 		return nil, errors.New("plugin mode requires a single file")
 	}
 
-	if output == "" {
-		output = "-"
+	if config.output == "" {
+		config.output = "-"
 	}
 
-	if base == "" {
-		if output == "-" {
-			base = "./"
+	if config.base == "" {
+		if config.output == "-" {
+			config.base = "./"
 		} else {
-			base = path.Dir(output)
+			config.base = path.Dir(config.output)
 		}
 	}
 
-	base, err = filepath.Abs(base)
+	config.base, err = filepath.Abs(config.base)
 	if err != nil {
 		return nil, fmt.Errorf("error getting absolute path for base: %w", err)
 	}
 
-	if html != "" {
-		if err := readImportsFromHTML(html, importMap); err != nil {
-			return nil, err
+	if config.html != "" {
+		if err := readImportsFromHTML(config.html, config.importMap); err != nil {
+			return nil, fmt.Errorf("error parsing import map from HTML: %w", err)
 		}
 	}
 
-	return &Config{}, nil
+	return config, nil
 }
 
 func readImportsFromHTML(html string, importMap importMap) error {
