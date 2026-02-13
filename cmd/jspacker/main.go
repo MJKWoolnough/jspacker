@@ -68,7 +68,7 @@ func (i importMap) Import(r io.Reader) error {
 		Imports map[string]string
 	}
 
-	if err := json.NewDecoder(os.Stdin).Decode(&im); err != nil {
+	if err := json.NewDecoder(r).Decode(&im); err != nil {
 		return err
 	}
 
