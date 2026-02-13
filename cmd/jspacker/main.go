@@ -135,7 +135,6 @@ func run() error {
 
 func parseConfig() (*Config, error) {
 	config := &Config{importMap: make(importMap)}
-	var err error
 
 	flag.Var(&config.filesTodo, "i", "input file")
 	flag.StringVar(&config.output, "o", "-", "output file")
@@ -151,25 +150,12 @@ func parseConfig() (*Config, error) {
 		return nil, errors.New("plugin mode requires a single file")
 	}
 
-	if config.output == "" {
-		config.output = "-"
-	}
-
-	if config.base == "" {
-		if config.output == "-" {
-			config.base = "./"
-		} else {
-			config.base = path.Dir(config.output)
-		}
-	}
-
-	config.base, err = filepath.Abs(config.base)
-	if err != nil {
-		return nil, fmt.Errorf("error getting absolute path for base: %w", err)
+	if err := config.setPaths(); err != nil {
+		return nil, err
 	}
 
 	if config.html != "" {
-		if err := readImportsFromHTML(config.html, config.importMap); err != nil {
+		if err := config.readImportsFromHTML(); err != nil {
 			return nil, fmt.Errorf("error parsing import map from HTML: %w", err)
 		}
 	}
@@ -177,8 +163,31 @@ func parseConfig() (*Config, error) {
 	return config, nil
 }
 
-func readImportsFromHTML(html string, importMap importMap) error {
-	f, err := os.Open(html)
+func (c *Config) setPaths() error {
+	var err error
+
+	if c.output == "" {
+		c.output = "-"
+	}
+
+	if c.base == "" {
+		if c.output == "-" {
+			c.base = "./"
+		} else {
+			c.base = path.Dir(c.output)
+		}
+	}
+
+	c.base, err = filepath.Abs(c.base)
+	if err != nil {
+		return fmt.Errorf("error getting absolute path for base: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Config) readImportsFromHTML() error {
+	f, err := os.Open(c.html)
 	if err != nil {
 		return err
 	}
@@ -198,7 +207,7 @@ func readImportsFromHTML(html string, importMap importMap) error {
 
 	for _, s := range h.Head.Scripts {
 		if s.Type == "importmap" {
-			if err := importMap.Import(strings.NewReader(s.Data)); err != nil {
+			if err := c.importMap.Import(strings.NewReader(s.Data)); err != nil {
 				return err
 			}
 		}
