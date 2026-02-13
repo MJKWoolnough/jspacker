@@ -144,86 +144,118 @@ func run() error {
 	}
 
 	if html != "" {
-		f, err := os.Open(html)
-		if err != nil {
+		if err := readImportsFromHTML(html, importMap); err != nil {
 			return err
-		}
-
-		defer f.Close()
-
-		html := xml.NewDecoder(f)
-		html.Strict = false
-		html.AutoClose = xml.HTMLAutoClose
-		html.Entity = xml.HTMLEntity
-
-		var h htmlPage
-
-		if err := html.Decode(&h); err != nil {
-			return err
-		}
-
-		for _, s := range h.Head.Scripts {
-			if s.Type == "importmap" {
-				if err := importMap.Import(strings.NewReader(s.Data)); err != nil {
-					return err
-				}
-			}
 		}
 	}
 
 	var s *javascript.Module
 
 	if plugin {
-		f, err := os.Open(filepath.Join(base, filepath.FromSlash(filesTodo[0])))
-		if err != nil {
-			return fmt.Errorf("error opening url: %w", err)
+		if s, err = readPlugin(base, filesTodo[0]); err != nil {
+			return err
 		}
-
-		tks := parser.NewReaderTokeniser(f)
-
-		m, err := javascript.ParseModule(&tks)
-
-		f.Close()
-
-		if err != nil {
-			return fmt.Errorf("error parsing javascript module: %w", err)
-		} else if s, err = jspacker.Plugin(m, filesTodo[0]); err != nil {
-			return fmt.Errorf("error processing javascript plugin: %w", err)
-		}
-	} else {
-		args := make([]jspacker.Option, 1, len(filesTodo)+4)
-		args[0] = jspacker.ParseDynamic
-
-		if len(importMap) > 0 {
-			args = append(args, jspacker.ResolveURL(importMap.Resolve))
-		}
-
-		if base != "" {
-			args = append(args, jspacker.Loader(jspacker.OSLoad(base)))
-		}
-
-		if noExports {
-			args = append(args, jspacker.NoExports)
-		}
-
-		if exports {
-			args = append(args, jspacker.PrimaryExports)
-		}
-
-		for _, f := range filesTodo {
-			args = append(args, jspacker.File(f))
-		}
-
-		if s, err = jspacker.Package(args...); err != nil {
-			return fmt.Errorf("error generating output: %w", err)
-		}
+	} else if s, err = readModuleWithOptions(filesTodo, importMap, base, noExports, exports); err != nil {
+		return err
 	}
 
 	for len(s.ModuleListItems) > 0 && s.ModuleListItems[0].ImportDeclaration == nil && s.ModuleListItems[0].ExportDeclaration == nil && s.ModuleListItems[0].StatementListItem == nil {
 		s.ModuleListItems = s.ModuleListItems[1:]
 	}
 
-	var of *os.File
+	return outputJS(output, s)
+}
+
+func readImportsFromHTML(html string, importMap importMap) error {
+	f, err := os.Open(html)
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	dec := xml.NewDecoder(f)
+	dec.Strict = false
+	dec.AutoClose = xml.HTMLAutoClose
+	dec.Entity = xml.HTMLEntity
+
+	var h htmlPage
+
+	if err := dec.Decode(&h); err != nil {
+		return err
+	}
+
+	for _, s := range h.Head.Scripts {
+		if s.Type == "importmap" {
+			if err := importMap.Import(strings.NewReader(s.Data)); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func readPlugin(base, input string) (*javascript.Module, error) {
+	f, err := os.Open(filepath.Join(base, filepath.FromSlash(input)))
+	if err != nil {
+		return nil, fmt.Errorf("error opening url: %w", err)
+	}
+
+	tks := parser.NewReaderTokeniser(f)
+
+	m, err := javascript.ParseModule(&tks)
+
+	f.Close()
+
+	var s *javascript.Module
+
+	if err != nil {
+		return nil, fmt.Errorf("error parsing javascript module: %w", err)
+	} else if s, err = jspacker.Plugin(m, input); err != nil {
+		return nil, fmt.Errorf("error processing javascript plugin: %w", err)
+	}
+
+	return s, nil
+}
+
+func readModuleWithOptions(filesTodo []string, importMap importMap, base string, noExports, exports bool) (*javascript.Module, error) {
+	args := make([]jspacker.Option, 1, len(filesTodo)+4)
+	args[0] = jspacker.ParseDynamic
+
+	if len(importMap) > 0 {
+		args = append(args, jspacker.ResolveURL(importMap.Resolve))
+	}
+
+	if base != "" {
+		args = append(args, jspacker.Loader(jspacker.OSLoad(base)))
+	}
+
+	if noExports {
+		args = append(args, jspacker.NoExports)
+	}
+
+	if exports {
+		args = append(args, jspacker.PrimaryExports)
+	}
+
+	for _, f := range filesTodo {
+		args = append(args, jspacker.File(f))
+	}
+
+	s, err := jspacker.Package(args...)
+	if err != nil {
+		return nil, fmt.Errorf("error generating output: %w", err)
+	}
+
+	return s, nil
+}
+
+func outputJS(output string, s *javascript.Module) error {
+	var (
+		of  *os.File
+		err error
+	)
 
 	if output == "-" {
 		of = os.Stdout
