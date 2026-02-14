@@ -225,25 +225,27 @@ func (d *dependency) handleExports(li javascript.ModuleItem) error {
 	if d.primary {
 		d.config.moduleItems = append(d.config.moduleItems, li)
 	} else if ed := li.ExportDeclaration; ed.FromClause != nil {
-		durl, _ := javascript.Unquote(ed.FromClause.ModuleSpecifier.Data)
-
-		if e, err := d.addDepImport(d.RelTo(durl)); err != nil {
+		if err := d.handleExportDeclarationWithFrom(ed); err != nil {
 			return err
-		} else if ed.ExportClause != nil {
-			for _, es := range ed.ExportClause.ExportList {
-				tk := es.IdentifierName.Data
-
-				if es.EIdentifierName != nil {
-					tk = es.EIdentifierName.Data
-				}
-
-				d.setExportBinding(tk, e, es.IdentifierName.Data)
-			}
-		} else if ed.ExportFromClause != nil {
-			d.setExportBinding(ed.ExportFromClause.Data, e, "")
-		} else {
-			d.config.exportAllFrom = append(d.config.exportAllFrom, [2]*dependency{d, e})
 		}
+	} else if ed.ExportClause != nil {
+		d.handleExportClause(ed.ExportClause)
+	} else if ed.VariableStatement != nil {
+		d.handleExportVariable(ed.VariableStatement)
+	} else if ed.Declaration != nil {
+		d.handleExportDeclaration(ed.Declaration)
+	} else {
+		d.handleExportDefault(ed)
+	}
+
+	return nil
+}
+
+func (d *dependency) handleExportDeclarationWithFrom(ed *javascript.ExportDeclaration) error {
+	durl, _ := javascript.Unquote(ed.FromClause.ModuleSpecifier.Data)
+
+	if e, err := d.addDepImport(d.RelTo(durl)); err != nil {
+		return err
 	} else if ed.ExportClause != nil {
 		for _, es := range ed.ExportClause.ExportList {
 			tk := es.IdentifierName.Data
@@ -252,103 +254,126 @@ func (d *dependency) handleExports(li javascript.ModuleItem) error {
 				tk = es.EIdentifierName.Data
 			}
 
-			d.setExportBinding(tk, nil, es.IdentifierName.Data)
+			d.setExportBinding(tk, e, es.IdentifierName.Data)
 		}
-	} else if ed.VariableStatement != nil {
-		for _, vd := range ed.VariableStatement.VariableDeclarationList {
-			d.processBindingElement(vd.BindingIdentifier, vd.ArrayBindingPattern, vd.ObjectBindingPattern)
-		}
-
-		d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
-			StatementListItem: &javascript.StatementListItem{
-				Statement: &javascript.Statement{
-					VariableStatement: ed.VariableStatement,
-				},
-			},
-		})
-	} else if ed.Declaration != nil {
-		if ed.Declaration.FunctionDeclaration != nil {
-			d.setExportBinding(ed.Declaration.FunctionDeclaration.BindingIdentifier.Data, nil, ed.Declaration.FunctionDeclaration.BindingIdentifier.Data)
-		} else if ed.Declaration.ClassDeclaration != nil {
-			d.setExportBinding(ed.Declaration.ClassDeclaration.BindingIdentifier.Data, nil, ed.Declaration.ClassDeclaration.BindingIdentifier.Data)
-		} else if ed.Declaration.LexicalDeclaration != nil {
-			for _, lb := range ed.Declaration.LexicalDeclaration.BindingList {
-				d.processBindingElement(lb.BindingIdentifier, lb.ArrayBindingPattern, lb.ObjectBindingPattern)
-			}
-		}
-
-		d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
-			StatementListItem: &javascript.StatementListItem{
-				Declaration: ed.Declaration,
-			},
-		})
+	} else if ed.ExportFromClause != nil {
+		d.setExportBinding(ed.ExportFromClause.Data, e, "")
 	} else {
-		def := jToken("default")
-		if ed.DefaultFunction != nil {
-			if ed.DefaultFunction.BindingIdentifier == nil {
-				ed.DefaultFunction.BindingIdentifier = def
-			} else {
-				def = ed.DefaultFunction.BindingIdentifier
-				d.scope.Bindings["default"] = d.scope.Bindings[def.Data]
+		d.config.exportAllFrom = append(d.config.exportAllFrom, [2]*dependency{d, e})
+	}
 
-				delete(d.scope.Bindings, def.Data)
-			}
+	return nil
+}
 
-			d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
-				StatementListItem: &javascript.StatementListItem{
-					Declaration: &javascript.Declaration{
-						FunctionDeclaration: ed.DefaultFunction,
-					},
+func (d *dependency) handleExportClause(ec *javascript.ExportClause) {
+	for _, es := range ec.ExportList {
+		tk := es.IdentifierName.Data
+
+		if es.EIdentifierName != nil {
+			tk = es.EIdentifierName.Data
+		}
+
+		d.setExportBinding(tk, nil, es.IdentifierName.Data)
+	}
+}
+
+func (d *dependency) handleExportVariable(v *javascript.VariableStatement) {
+	for _, vd := range v.VariableDeclarationList {
+		d.processBindingElement(vd.BindingIdentifier, vd.ArrayBindingPattern, vd.ObjectBindingPattern)
+	}
+
+	d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
+		StatementListItem: &javascript.StatementListItem{
+			Statement: &javascript.Statement{
+				VariableStatement: v,
+			},
+		},
+	})
+}
+
+func (d *dependency) handleExportDeclaration(ed *javascript.Declaration) {
+	if ed.FunctionDeclaration != nil {
+		d.setExportBinding(ed.FunctionDeclaration.BindingIdentifier.Data, nil, ed.FunctionDeclaration.BindingIdentifier.Data)
+	} else if ed.ClassDeclaration != nil {
+		d.setExportBinding(ed.ClassDeclaration.BindingIdentifier.Data, nil, ed.ClassDeclaration.BindingIdentifier.Data)
+	} else if ed.LexicalDeclaration != nil {
+		for _, lb := range ed.LexicalDeclaration.BindingList {
+			d.processBindingElement(lb.BindingIdentifier, lb.ArrayBindingPattern, lb.ObjectBindingPattern)
+		}
+	}
+
+	d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
+		StatementListItem: &javascript.StatementListItem{
+			Declaration: ed,
+		},
+	})
+}
+
+func (d *dependency) handleExportDefault(ed *javascript.ExportDeclaration) {
+	def := jToken("default")
+
+	if ed.DefaultFunction != nil {
+		if ed.DefaultFunction.BindingIdentifier == nil {
+			ed.DefaultFunction.BindingIdentifier = def
+		} else {
+			def = ed.DefaultFunction.BindingIdentifier
+			d.scope.Bindings["default"] = d.scope.Bindings[def.Data]
+
+			delete(d.scope.Bindings, def.Data)
+		}
+
+		d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
+			StatementListItem: &javascript.StatementListItem{
+				Declaration: &javascript.Declaration{
+					FunctionDeclaration: ed.DefaultFunction,
 				},
-			})
-		} else if ed.DefaultClass != nil {
-			if ed.DefaultClass.BindingIdentifier == nil {
-				ed.DefaultClass.BindingIdentifier = def
-			} else {
-				def = ed.DefaultClass.BindingIdentifier
-				d.scope.Bindings["default"] = d.scope.Bindings[def.Data]
+			},
+		})
+	} else if ed.DefaultClass != nil {
+		if ed.DefaultClass.BindingIdentifier == nil {
+			ed.DefaultClass.BindingIdentifier = def
+		} else {
+			def = ed.DefaultClass.BindingIdentifier
+			d.scope.Bindings["default"] = d.scope.Bindings[def.Data]
 
-				delete(d.scope.Bindings, def.Data)
-			}
+			delete(d.scope.Bindings, def.Data)
+		}
 
-			d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
-				StatementListItem: &javascript.StatementListItem{
-					Declaration: &javascript.Declaration{
-						ClassDeclaration: ed.DefaultClass,
-					},
+		d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
+			StatementListItem: &javascript.StatementListItem{
+				Declaration: &javascript.Declaration{
+					ClassDeclaration: ed.DefaultClass,
 				},
-			})
-		} else if ed.DefaultAssignmentExpression != nil {
-			d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
-				StatementListItem: &javascript.StatementListItem{
-					Declaration: &javascript.Declaration{
-						LexicalDeclaration: &javascript.LexicalDeclaration{
-							LetOrConst: javascript.Const,
-							BindingList: []javascript.LexicalBinding{
-								{
-									BindingIdentifier: def,
-									Initializer:       ed.DefaultAssignmentExpression,
-								},
+			},
+		})
+	} else if ed.DefaultAssignmentExpression != nil {
+		d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
+			StatementListItem: &javascript.StatementListItem{
+				Declaration: &javascript.Declaration{
+					LexicalDeclaration: &javascript.LexicalDeclaration{
+						LetOrConst: javascript.Const,
+						BindingList: []javascript.LexicalBinding{
+							{
+								BindingIdentifier: def,
+								Initializer:       ed.DefaultAssignmentExpression,
 							},
 						},
 					},
 				},
-			})
-		}
-
-		if len(d.scope.Bindings["default"]) == 0 {
-			d.scope.Bindings["default"] = []scope.Binding{
-				{
-					BindingType: scope.BindingLexicalConst,
-					Token:       def,
-				},
-			}
-		}
-
-		d.setExportBinding("default", nil, "default")
+			},
+		})
 	}
 
-	return nil
+	if len(d.scope.Bindings["default"]) == 0 {
+		d.scope.Bindings["default"] = []scope.Binding{
+			{
+				BindingType: scope.BindingLexicalConst,
+				Token:       def,
+			},
+		}
+	}
+
+	d.setExportBinding("default", nil, "default")
 }
 
 func (d *dependency) addMeta() {
