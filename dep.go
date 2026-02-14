@@ -93,273 +93,12 @@ func (d *dependency) process() error {
 		return fmt.Errorf("error processing scope in file %s: %w", d.url, err)
 	}
 
-	for _, li := range module.ModuleListItems {
-		if li.ImportDeclaration != nil {
-			durl, _ := javascript.Unquote(li.ImportDeclaration.FromClause.ModuleSpecifier.Data)
-			iurl := d.RelTo(durl)
-
-			e, err := d.addDepImport(iurl)
-			if err != nil {
-				return err
-			}
-
-			if li.ImportDeclaration.ImportClause == nil {
-				continue
-			}
-
-			if li.ImportDeclaration.ImportedDefaultBinding != nil {
-				d.setImportBinding(li.ImportDeclaration.ImportedDefaultBinding.Data, e, "default")
-			}
-
-			if li.ImportDeclaration.NameSpaceImport != nil {
-				d.setImportBinding(li.ImportDeclaration.NameSpaceImport.Data, e, "*")
-
-				d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
-					StatementListItem: &javascript.StatementListItem{
-						Declaration: &javascript.Declaration{
-							LexicalDeclaration: &javascript.LexicalDeclaration{
-								LetOrConst: javascript.Const,
-								BindingList: []javascript.LexicalBinding{
-									{
-										BindingIdentifier: li.ImportDeclaration.NameSpaceImport,
-										Initializer: &javascript.AssignmentExpression{
-											ConditionalExpression: javascript.WrapConditional(javascript.UnaryExpression{
-												UnaryOperators: []javascript.UnaryOperatorComments{{UnaryOperator: javascript.UnaryAwait}},
-												UpdateExpression: javascript.UpdateExpression{
-													LeftHandSideExpression: &javascript.LeftHandSideExpression{
-														CallExpression: &javascript.CallExpression{
-															MemberExpression: &javascript.MemberExpression{
-																PrimaryExpression: &javascript.PrimaryExpression{
-																	IdentifierReference: jToken("include"),
-																},
-															},
-															Arguments: &javascript.Arguments{
-																ArgumentList: []javascript.Argument{
-																	{
-																		AssignmentExpression: javascript.AssignmentExpression{
-																			ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																				Literal: jToken(strconv.Quote(iurl)),
-																			}),
-																		},
-																	},
-																	{
-																		AssignmentExpression: javascript.AssignmentExpression{
-																			ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																				Literal: jToken("true"),
-																			}),
-																		},
-																	},
-																},
-															},
-														},
-													},
-												},
-											}),
-										},
-									},
-								},
-							},
-						},
-					},
-				})
-			} else if li.ImportDeclaration.NamedImports != nil {
-				for _, is := range li.ImportDeclaration.NamedImports.ImportList {
-					tk := is.ImportedBinding
-
-					if is.IdentifierName != nil {
-						tk = is.IdentifierName
-					}
-
-					d.setImportBinding(is.ImportedBinding.Data, e, tk.Data)
-				}
-			}
-		} else if li.StatementListItem != nil {
-			d.config.moduleItems = append(d.config.moduleItems, li)
-		} else if li.ExportDeclaration != nil {
-			if d.primary {
-				d.config.moduleItems = append(d.config.moduleItems, li)
-			} else if ed := li.ExportDeclaration; ed.FromClause != nil {
-				durl, _ := javascript.Unquote(ed.FromClause.ModuleSpecifier.Data)
-
-				if e, err := d.addDepImport(d.RelTo(durl)); err != nil {
-					return err
-				} else if ed.ExportClause != nil {
-					for _, es := range ed.ExportClause.ExportList {
-						tk := es.IdentifierName.Data
-
-						if es.EIdentifierName != nil {
-							tk = es.EIdentifierName.Data
-						}
-
-						d.setExportBinding(tk, e, es.IdentifierName.Data)
-					}
-				} else if ed.ExportFromClause != nil {
-					d.setExportBinding(ed.ExportFromClause.Data, e, "")
-				} else {
-					d.config.exportAllFrom = append(d.config.exportAllFrom, [2]*dependency{d, e})
-				}
-			} else if ed.ExportClause != nil {
-				for _, es := range ed.ExportClause.ExportList {
-					tk := es.IdentifierName.Data
-
-					if es.EIdentifierName != nil {
-						tk = es.EIdentifierName.Data
-					}
-
-					d.setExportBinding(tk, nil, es.IdentifierName.Data)
-				}
-			} else if ed.VariableStatement != nil {
-				for _, vd := range ed.VariableStatement.VariableDeclarationList {
-					d.processBindingElement(vd.BindingIdentifier, vd.ArrayBindingPattern, vd.ObjectBindingPattern)
-				}
-
-				d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
-					StatementListItem: &javascript.StatementListItem{
-						Statement: &javascript.Statement{
-							VariableStatement: ed.VariableStatement,
-						},
-					},
-				})
-			} else if ed.Declaration != nil {
-				if ed.Declaration.FunctionDeclaration != nil {
-					d.setExportBinding(ed.Declaration.FunctionDeclaration.BindingIdentifier.Data, nil, ed.Declaration.FunctionDeclaration.BindingIdentifier.Data)
-				} else if ed.Declaration.ClassDeclaration != nil {
-					d.setExportBinding(ed.Declaration.ClassDeclaration.BindingIdentifier.Data, nil, ed.Declaration.ClassDeclaration.BindingIdentifier.Data)
-				} else if ed.Declaration.LexicalDeclaration != nil {
-					for _, lb := range ed.Declaration.LexicalDeclaration.BindingList {
-						d.processBindingElement(lb.BindingIdentifier, lb.ArrayBindingPattern, lb.ObjectBindingPattern)
-					}
-				}
-
-				d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
-					StatementListItem: &javascript.StatementListItem{
-						Declaration: ed.Declaration,
-					},
-				})
-			} else {
-				def := jToken("default")
-				if ed.DefaultFunction != nil {
-					if ed.DefaultFunction.BindingIdentifier == nil {
-						ed.DefaultFunction.BindingIdentifier = def
-					} else {
-						def = ed.DefaultFunction.BindingIdentifier
-						d.scope.Bindings["default"] = d.scope.Bindings[def.Data]
-
-						delete(d.scope.Bindings, def.Data)
-					}
-
-					d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
-						StatementListItem: &javascript.StatementListItem{
-							Declaration: &javascript.Declaration{
-								FunctionDeclaration: ed.DefaultFunction,
-							},
-						},
-					})
-				} else if ed.DefaultClass != nil {
-					if ed.DefaultClass.BindingIdentifier == nil {
-						ed.DefaultClass.BindingIdentifier = def
-					} else {
-						def = ed.DefaultClass.BindingIdentifier
-						d.scope.Bindings["default"] = d.scope.Bindings[def.Data]
-
-						delete(d.scope.Bindings, def.Data)
-					}
-
-					d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
-						StatementListItem: &javascript.StatementListItem{
-							Declaration: &javascript.Declaration{
-								ClassDeclaration: ed.DefaultClass,
-							},
-						},
-					})
-				} else if ed.DefaultAssignmentExpression != nil {
-					d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
-						StatementListItem: &javascript.StatementListItem{
-							Declaration: &javascript.Declaration{
-								LexicalDeclaration: &javascript.LexicalDeclaration{
-									LetOrConst: javascript.Const,
-									BindingList: []javascript.LexicalBinding{
-										{
-											BindingIdentifier: def,
-											Initializer:       ed.DefaultAssignmentExpression,
-										},
-									},
-								},
-							},
-						},
-					})
-				}
-
-				if len(d.scope.Bindings["default"]) == 0 {
-					d.scope.Bindings["default"] = []scope.Binding{
-						{
-							BindingType: scope.BindingLexicalConst,
-							Token:       def,
-						},
-					}
-				}
-
-				d.setExportBinding("default", nil, "default")
-			}
-		}
+	if err := d.processModuleListItems(module); err != nil {
+		return err
 	}
 
 	if d.needsMeta {
-		d.config.moduleItems[1].StatementListItem.Declaration.LexicalDeclaration.BindingList = append(d.config.moduleItems[1].StatementListItem.Declaration.LexicalDeclaration.BindingList, javascript.LexicalBinding{
-			BindingIdentifier: jToken(d.prefix + "import"),
-			Initializer: &javascript.AssignmentExpression{
-				ConditionalExpression: javascript.WrapConditional(&javascript.ObjectLiteral{
-					PropertyDefinitionList: []javascript.PropertyDefinition{
-						{
-							PropertyName: &javascript.PropertyName{
-								LiteralPropertyName: jToken("url"),
-							},
-							AssignmentExpression: &javascript.AssignmentExpression{
-								ConditionalExpression: javascript.WrapConditional(&javascript.AdditiveExpression{
-									AdditiveExpression: &javascript.AdditiveExpression{
-										MultiplicativeExpression: javascript.MultiplicativeExpression{
-											ExponentiationExpression: javascript.ExponentiationExpression{
-												UnaryExpression: javascript.UnaryExpression{
-													UpdateExpression: javascript.UpdateExpression{
-														LeftHandSideExpression: &javascript.LeftHandSideExpression{
-															NewExpression: &javascript.NewExpression{
-																MemberExpression: javascript.MemberExpression{
-																	PrimaryExpression: &javascript.PrimaryExpression{
-																		IdentifierReference: jToken("o"),
-																	},
-																},
-															},
-														},
-													},
-												},
-											},
-										},
-									},
-									AdditiveOperator: javascript.AdditiveAdd,
-									MultiplicativeExpression: javascript.MultiplicativeExpression{
-										ExponentiationExpression: javascript.ExponentiationExpression{
-											UnaryExpression: javascript.UnaryExpression{
-												UpdateExpression: javascript.UpdateExpression{
-													LeftHandSideExpression: &javascript.LeftHandSideExpression{
-														NewExpression: &javascript.NewExpression{
-															MemberExpression: javascript.MemberExpression{
-																PrimaryExpression: &javascript.PrimaryExpression{
-																	Literal: jToken(strconv.Quote(d.url)),
-																},
-															},
-														},
-													},
-												},
-											},
-										},
-									},
-								}),
-							},
-						},
-					},
-				}),
-			},
-		})
+		d.addMeta()
 	}
 
 	d.processBindings(d.scope)
@@ -371,6 +110,295 @@ func (d *dependency) process() error {
 	}
 
 	return nil
+}
+
+func (d *dependency) processModuleListItems(module *javascript.Module) error {
+	for _, li := range module.ModuleListItems {
+		if li.ImportDeclaration != nil {
+			if err := d.handleImports(li.ImportDeclaration); err != nil {
+				return err
+			}
+		} else if li.StatementListItem != nil {
+			d.config.moduleItems = append(d.config.moduleItems, li)
+		} else if li.ExportDeclaration != nil {
+			if err := d.handleExports(li); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (d *dependency) handleImports(id *javascript.ImportDeclaration) error {
+	durl, _ := javascript.Unquote(id.FromClause.ModuleSpecifier.Data)
+	iurl := d.RelTo(durl)
+
+	e, err := d.addDepImport(iurl)
+	if err != nil {
+		return err
+	}
+
+	if id.ImportClause == nil {
+		return nil
+	}
+
+	if id.ImportedDefaultBinding != nil {
+		d.setImportBinding(id.ImportedDefaultBinding.Data, e, "default")
+	}
+
+	if id.NameSpaceImport != nil {
+		d.setImportBinding(id.NameSpaceImport.Data, e, "*")
+
+		d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
+			StatementListItem: &javascript.StatementListItem{
+				Declaration: &javascript.Declaration{
+					LexicalDeclaration: &javascript.LexicalDeclaration{
+						LetOrConst: javascript.Const,
+						BindingList: []javascript.LexicalBinding{
+							{
+								BindingIdentifier: id.NameSpaceImport,
+								Initializer: &javascript.AssignmentExpression{
+									ConditionalExpression: javascript.WrapConditional(javascript.UnaryExpression{
+										UnaryOperators: []javascript.UnaryOperatorComments{{UnaryOperator: javascript.UnaryAwait}},
+										UpdateExpression: javascript.UpdateExpression{
+											LeftHandSideExpression: &javascript.LeftHandSideExpression{
+												CallExpression: &javascript.CallExpression{
+													MemberExpression: &javascript.MemberExpression{
+														PrimaryExpression: &javascript.PrimaryExpression{
+															IdentifierReference: jToken("include"),
+														},
+													},
+													Arguments: &javascript.Arguments{
+														ArgumentList: []javascript.Argument{
+															{
+																AssignmentExpression: javascript.AssignmentExpression{
+																	ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+																		Literal: jToken(strconv.Quote(iurl)),
+																	}),
+																},
+															},
+															{
+																AssignmentExpression: javascript.AssignmentExpression{
+																	ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+																		Literal: jToken("true"),
+																	}),
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									}),
+								},
+							},
+						},
+					},
+				},
+			},
+		})
+	} else if id.NamedImports != nil {
+		for _, is := range id.NamedImports.ImportList {
+			tk := is.ImportedBinding
+
+			if is.IdentifierName != nil {
+				tk = is.IdentifierName
+			}
+
+			d.setImportBinding(is.ImportedBinding.Data, e, tk.Data)
+		}
+	}
+
+	return nil
+}
+
+func (d *dependency) handleExports(li javascript.ModuleItem) error {
+	if d.primary {
+		d.config.moduleItems = append(d.config.moduleItems, li)
+	} else if ed := li.ExportDeclaration; ed.FromClause != nil {
+		durl, _ := javascript.Unquote(ed.FromClause.ModuleSpecifier.Data)
+
+		if e, err := d.addDepImport(d.RelTo(durl)); err != nil {
+			return err
+		} else if ed.ExportClause != nil {
+			for _, es := range ed.ExportClause.ExportList {
+				tk := es.IdentifierName.Data
+
+				if es.EIdentifierName != nil {
+					tk = es.EIdentifierName.Data
+				}
+
+				d.setExportBinding(tk, e, es.IdentifierName.Data)
+			}
+		} else if ed.ExportFromClause != nil {
+			d.setExportBinding(ed.ExportFromClause.Data, e, "")
+		} else {
+			d.config.exportAllFrom = append(d.config.exportAllFrom, [2]*dependency{d, e})
+		}
+	} else if ed.ExportClause != nil {
+		for _, es := range ed.ExportClause.ExportList {
+			tk := es.IdentifierName.Data
+
+			if es.EIdentifierName != nil {
+				tk = es.EIdentifierName.Data
+			}
+
+			d.setExportBinding(tk, nil, es.IdentifierName.Data)
+		}
+	} else if ed.VariableStatement != nil {
+		for _, vd := range ed.VariableStatement.VariableDeclarationList {
+			d.processBindingElement(vd.BindingIdentifier, vd.ArrayBindingPattern, vd.ObjectBindingPattern)
+		}
+
+		d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
+			StatementListItem: &javascript.StatementListItem{
+				Statement: &javascript.Statement{
+					VariableStatement: ed.VariableStatement,
+				},
+			},
+		})
+	} else if ed.Declaration != nil {
+		if ed.Declaration.FunctionDeclaration != nil {
+			d.setExportBinding(ed.Declaration.FunctionDeclaration.BindingIdentifier.Data, nil, ed.Declaration.FunctionDeclaration.BindingIdentifier.Data)
+		} else if ed.Declaration.ClassDeclaration != nil {
+			d.setExportBinding(ed.Declaration.ClassDeclaration.BindingIdentifier.Data, nil, ed.Declaration.ClassDeclaration.BindingIdentifier.Data)
+		} else if ed.Declaration.LexicalDeclaration != nil {
+			for _, lb := range ed.Declaration.LexicalDeclaration.BindingList {
+				d.processBindingElement(lb.BindingIdentifier, lb.ArrayBindingPattern, lb.ObjectBindingPattern)
+			}
+		}
+
+		d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
+			StatementListItem: &javascript.StatementListItem{
+				Declaration: ed.Declaration,
+			},
+		})
+	} else {
+		def := jToken("default")
+		if ed.DefaultFunction != nil {
+			if ed.DefaultFunction.BindingIdentifier == nil {
+				ed.DefaultFunction.BindingIdentifier = def
+			} else {
+				def = ed.DefaultFunction.BindingIdentifier
+				d.scope.Bindings["default"] = d.scope.Bindings[def.Data]
+
+				delete(d.scope.Bindings, def.Data)
+			}
+
+			d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
+				StatementListItem: &javascript.StatementListItem{
+					Declaration: &javascript.Declaration{
+						FunctionDeclaration: ed.DefaultFunction,
+					},
+				},
+			})
+		} else if ed.DefaultClass != nil {
+			if ed.DefaultClass.BindingIdentifier == nil {
+				ed.DefaultClass.BindingIdentifier = def
+			} else {
+				def = ed.DefaultClass.BindingIdentifier
+				d.scope.Bindings["default"] = d.scope.Bindings[def.Data]
+
+				delete(d.scope.Bindings, def.Data)
+			}
+
+			d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
+				StatementListItem: &javascript.StatementListItem{
+					Declaration: &javascript.Declaration{
+						ClassDeclaration: ed.DefaultClass,
+					},
+				},
+			})
+		} else if ed.DefaultAssignmentExpression != nil {
+			d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
+				StatementListItem: &javascript.StatementListItem{
+					Declaration: &javascript.Declaration{
+						LexicalDeclaration: &javascript.LexicalDeclaration{
+							LetOrConst: javascript.Const,
+							BindingList: []javascript.LexicalBinding{
+								{
+									BindingIdentifier: def,
+									Initializer:       ed.DefaultAssignmentExpression,
+								},
+							},
+						},
+					},
+				},
+			})
+		}
+
+		if len(d.scope.Bindings["default"]) == 0 {
+			d.scope.Bindings["default"] = []scope.Binding{
+				{
+					BindingType: scope.BindingLexicalConst,
+					Token:       def,
+				},
+			}
+		}
+
+		d.setExportBinding("default", nil, "default")
+	}
+
+	return nil
+}
+
+func (d *dependency) addMeta() {
+	d.config.moduleItems[1].StatementListItem.Declaration.LexicalDeclaration.BindingList = append(d.config.moduleItems[1].StatementListItem.Declaration.LexicalDeclaration.BindingList, javascript.LexicalBinding{
+		BindingIdentifier: jToken(d.prefix + "import"),
+		Initializer: &javascript.AssignmentExpression{
+			ConditionalExpression: javascript.WrapConditional(&javascript.ObjectLiteral{
+				PropertyDefinitionList: []javascript.PropertyDefinition{
+					{
+						PropertyName: &javascript.PropertyName{
+							LiteralPropertyName: jToken("url"),
+						},
+						AssignmentExpression: &javascript.AssignmentExpression{
+							ConditionalExpression: javascript.WrapConditional(&javascript.AdditiveExpression{
+								AdditiveExpression: &javascript.AdditiveExpression{
+									MultiplicativeExpression: javascript.MultiplicativeExpression{
+										ExponentiationExpression: javascript.ExponentiationExpression{
+											UnaryExpression: javascript.UnaryExpression{
+												UpdateExpression: javascript.UpdateExpression{
+													LeftHandSideExpression: &javascript.LeftHandSideExpression{
+														NewExpression: &javascript.NewExpression{
+															MemberExpression: javascript.MemberExpression{
+																PrimaryExpression: &javascript.PrimaryExpression{
+																	IdentifierReference: jToken("o"),
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+								AdditiveOperator: javascript.AdditiveAdd,
+								MultiplicativeExpression: javascript.MultiplicativeExpression{
+									ExponentiationExpression: javascript.ExponentiationExpression{
+										UnaryExpression: javascript.UnaryExpression{
+											UpdateExpression: javascript.UpdateExpression{
+												LeftHandSideExpression: &javascript.LeftHandSideExpression{
+													NewExpression: &javascript.NewExpression{
+														MemberExpression: javascript.MemberExpression{
+															PrimaryExpression: &javascript.PrimaryExpression{
+																Literal: jToken(strconv.Quote(d.url)),
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							}),
+						},
+					},
+				},
+			}),
+		},
+	})
 }
 
 func (d *dependency) Handle(t javascript.Type) error {
