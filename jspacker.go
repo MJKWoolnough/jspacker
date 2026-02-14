@@ -1,4 +1,4 @@
-// Package jspacker is a javascript packer for javascript projects.
+// Package jspacker is a JavaScript packer for JavaScript projects.
 package jspacker
 
 import (
@@ -124,7 +124,7 @@ func OSLoad(base string) func(string) (*javascript.Module, error) {
 	}
 }
 
-// Package packages up multiple javascript modules into a single file, renaming
+// Package packages up multiple JavaScript modules into a single file, renaming
 // bindings to simulate imports.
 func Package(opts ...Option) (*javascript.Module, error) {
 	c := config{
@@ -218,7 +218,7 @@ func Package(opts ...Option) (*javascript.Module, error) {
 	}, nil
 }
 
-// Plugin converts a single javascript module to make use of the processed
+// Plugin converts a single JavaScript module to make use of the processed
 // exports from package.
 func Plugin(m *javascript.Module, url string) (*javascript.Module, error) {
 	if !strings.HasPrefix(url, "/") {
