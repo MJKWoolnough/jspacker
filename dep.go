@@ -148,69 +148,77 @@ func (d *dependency) handleImports(id *javascript.ImportDeclaration) error {
 	}
 
 	if id.NameSpaceImport != nil {
-		d.setImportBinding(id.NameSpaceImport.Data, e, "*")
+		d.handleNamespaceImport(iurl, e, id.NameSpaceImport)
+	} else if id.NamedImports != nil {
+		d.handleNamedImports(e, id.NamedImports)
+	}
 
-		d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
-			StatementListItem: &javascript.StatementListItem{
-				Declaration: &javascript.Declaration{
-					LexicalDeclaration: &javascript.LexicalDeclaration{
-						LetOrConst: javascript.Const,
-						BindingList: []javascript.LexicalBinding{
-							{
-								BindingIdentifier: id.NameSpaceImport,
-								Initializer: &javascript.AssignmentExpression{
-									ConditionalExpression: javascript.WrapConditional(javascript.UnaryExpression{
-										UnaryOperators: []javascript.UnaryOperatorComments{{UnaryOperator: javascript.UnaryAwait}},
-										UpdateExpression: javascript.UpdateExpression{
-											LeftHandSideExpression: &javascript.LeftHandSideExpression{
-												CallExpression: &javascript.CallExpression{
-													MemberExpression: &javascript.MemberExpression{
-														PrimaryExpression: &javascript.PrimaryExpression{
-															IdentifierReference: jToken("include"),
-														},
+	return nil
+}
+
+func (d *dependency) handleNamespaceImport(iurl string, e *dependency, ns *javascript.Token) {
+	d.setImportBinding(ns.Data, e, "*")
+
+	d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
+		StatementListItem: &javascript.StatementListItem{
+			Declaration: &javascript.Declaration{
+				LexicalDeclaration: &javascript.LexicalDeclaration{
+					LetOrConst: javascript.Const,
+					BindingList: []javascript.LexicalBinding{
+						{
+							BindingIdentifier: ns,
+							Initializer: &javascript.AssignmentExpression{
+								ConditionalExpression: javascript.WrapConditional(javascript.UnaryExpression{
+									UnaryOperators: []javascript.UnaryOperatorComments{{UnaryOperator: javascript.UnaryAwait}},
+									UpdateExpression: javascript.UpdateExpression{
+										LeftHandSideExpression: &javascript.LeftHandSideExpression{
+											CallExpression: &javascript.CallExpression{
+												MemberExpression: &javascript.MemberExpression{
+													PrimaryExpression: &javascript.PrimaryExpression{
+														IdentifierReference: jToken("include"),
 													},
-													Arguments: &javascript.Arguments{
-														ArgumentList: []javascript.Argument{
-															{
-																AssignmentExpression: javascript.AssignmentExpression{
-																	ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																		Literal: jToken(strconv.Quote(iurl)),
-																	}),
-																},
+												},
+												Arguments: &javascript.Arguments{
+													ArgumentList: []javascript.Argument{
+														{
+															AssignmentExpression: javascript.AssignmentExpression{
+																ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+																	Literal: jToken(strconv.Quote(iurl)),
+																}),
 															},
-															{
-																AssignmentExpression: javascript.AssignmentExpression{
-																	ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																		Literal: jToken("true"),
-																	}),
-																},
+														},
+														{
+															AssignmentExpression: javascript.AssignmentExpression{
+																ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+																	Literal: jToken("true"),
+																}),
 															},
 														},
 													},
 												},
 											},
 										},
-									}),
-								},
+									},
+								}),
 							},
 						},
 					},
 				},
 			},
-		})
-	} else if id.NamedImports != nil {
-		for _, is := range id.NamedImports.ImportList {
-			tk := is.ImportedBinding
+		},
+	})
+}
 
-			if is.IdentifierName != nil {
-				tk = is.IdentifierName
-			}
+func (d *dependency) handleNamedImports(e *dependency, ni *javascript.NamedImports) {
+	for _, is := range ni.ImportList {
+		tk := is.ImportedBinding
 
-			d.setImportBinding(is.ImportedBinding.Data, e, tk.Data)
+		if is.IdentifierName != nil {
+			tk = is.IdentifierName
 		}
-	}
 
-	return nil
+		d.setImportBinding(is.ImportedBinding.Data, e, tk.Data)
+	}
 }
 
 func (d *dependency) handleExports(li javascript.ModuleItem) error {
