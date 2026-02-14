@@ -1,6 +1,7 @@
 package jspacker
 
 import (
+	"errors"
 	"fmt"
 	"path"
 	"strconv"
@@ -86,8 +87,10 @@ func (d *dependency) process() error {
 
 	d.scope, err = scope.ModuleScope(module, nil)
 	if err != nil {
-		if derr, ok := err.(scope.ErrDuplicateDeclaration); ok {
-			return fmt.Errorf("error processing scope in file %s: %w: %v", d.url, err, derr.Duplicate)
+		var dupeErr scope.ErrDuplicateDeclaration
+
+		if errors.As(err, &dupeErr) {
+			return fmt.Errorf("error processing scope in file %s: %w: %v", d.url, err, dupeErr)
 		}
 
 		return fmt.Errorf("error processing scope in file %s: %w", d.url, err)
