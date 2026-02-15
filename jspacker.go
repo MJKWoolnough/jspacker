@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"vimagination.zapto.org/javascript"
@@ -127,8 +128,7 @@ func OSLoad(base string) func(string) (*javascript.Module, error) {
 // bindings to simulate imports.
 func Package(opts ...Option) (*javascript.Module, error) {
 	c := config{
-		moduleItems: make([]javascript.ModuleItem, 2),
-		filesDone:   make(map[string]*dependency),
+		filesDone: make(map[string]*dependency),
 		dependency: dependency{
 			requires: make(map[string]*dependency),
 		},
@@ -154,7 +154,7 @@ func Package(opts ...Option) (*javascript.Module, error) {
 		return nil, ErrNoFiles
 	}
 
-	c.moduleItems[1].StatementListItem = locationOrigin()
+	c.moduleItems = slices.Insert(c.moduleItems, 0, locationOrigin())
 
 	for _, url := range c.filesToDo {
 		if !strings.HasPrefix(url, "/") {
@@ -186,9 +186,6 @@ func Package(opts ...Option) (*javascript.Module, error) {
 		return nil, err
 	} else if err := c.makeLoader(); err != nil {
 		return nil, err
-	} else if len(c.moduleItems[1].StatementListItem.Declaration.LexicalDeclaration.BindingList) == 1 {
-		c.moduleItems[1] = c.moduleItems[0]
-		c.moduleItems = c.moduleItems[1:]
 	}
 
 	return &javascript.Module{

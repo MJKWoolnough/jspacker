@@ -170,23 +170,25 @@ func replaceImportCall(ce *javascript.CallExpression) {
 	ce.ImportCall = nil
 }
 
-func locationOrigin() *javascript.StatementListItem {
-	return &javascript.StatementListItem{
-		Declaration: &javascript.Declaration{
-			LexicalDeclaration: &javascript.LexicalDeclaration{
-				LetOrConst: javascript.Const,
-				BindingList: []javascript.LexicalBinding{
-					{
-						BindingIdentifier: jToken("o"),
-						Initializer: &javascript.AssignmentExpression{
-							ConditionalExpression: javascript.WrapConditional(javascript.MemberExpression{
-								MemberExpression: &javascript.MemberExpression{
-									PrimaryExpression: &javascript.PrimaryExpression{
-										IdentifierReference: jToken("location"),
+func locationOrigin() javascript.ModuleItem {
+	return javascript.ModuleItem{
+		StatementListItem: &javascript.StatementListItem{
+			Declaration: &javascript.Declaration{
+				LexicalDeclaration: &javascript.LexicalDeclaration{
+					LetOrConst: javascript.Const,
+					BindingList: []javascript.LexicalBinding{
+						{
+							BindingIdentifier: jToken("o"),
+							Initializer: &javascript.AssignmentExpression{
+								ConditionalExpression: javascript.WrapConditional(javascript.MemberExpression{
+									MemberExpression: &javascript.MemberExpression{
+										PrimaryExpression: &javascript.PrimaryExpression{
+											IdentifierReference: jToken("location"),
+										},
 									},
-								},
-								IdentifierName: jToken("origin"),
-							}),
+									IdentifierName: jToken("origin"),
+								}),
+							},
 						},
 					},
 				},
