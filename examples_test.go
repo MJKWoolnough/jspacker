@@ -33,6 +33,10 @@ func Example() {
 	}
 
 	// Output:
+	// const [b_, a_] = [[["default", () => b_default]], []].map(props => Object.freeze(Object.defineProperties({}, Object.fromEntries(props.map(([prop, get]) => [prop, {enumerable: true, get}])))));
+	//
+	// const o = location.origin;
+	//
 	// const b_default = () => 1;
 	//
 	// const a_v = 2;
