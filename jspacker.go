@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"vimagination.zapto.org/javascript"
@@ -155,28 +154,7 @@ func Package(opts ...Option) (*javascript.Module, error) {
 		return nil, ErrNoFiles
 	}
 
-	c.moduleItems[1].StatementListItem = &javascript.StatementListItem{
-		Declaration: &javascript.Declaration{
-			LexicalDeclaration: &javascript.LexicalDeclaration{
-				LetOrConst: javascript.Const,
-				BindingList: []javascript.LexicalBinding{
-					{
-						BindingIdentifier: jToken("o"),
-						Initializer: &javascript.AssignmentExpression{
-							ConditionalExpression: javascript.WrapConditional(javascript.MemberExpression{
-								MemberExpression: &javascript.MemberExpression{
-									PrimaryExpression: &javascript.PrimaryExpression{
-										IdentifierReference: jToken("location"),
-									},
-								},
-								IdentifierName: jToken("origin"),
-							}),
-						},
-					},
-				},
-			},
-		},
-	}
+	c.moduleItems[1].StatementListItem = locationOrigin()
 
 	for _, url := range c.filesToDo {
 		if !strings.HasPrefix(url, "/") {
@@ -259,13 +237,7 @@ func Plugin(m *javascript.Module, url string) (*javascript.Module, error) {
 
 				ib = id2String(imports)
 				importURLs[iurl] = ib
-				ae := javascript.Argument{
-					AssignmentExpression: javascript.AssignmentExpression{
-						ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-							Literal: jToken(strconv.Quote(iurl)),
-						}),
-					},
-				}
+				ae := wrapArgument(iurl)
 				importURLsArray = append(importURLsArray, ae)
 				importURLsArrayE = append(importURLsArrayE, javascript.ArrayElement{
 					AssignmentExpression: ae.AssignmentExpression,
@@ -283,14 +255,7 @@ func Plugin(m *javascript.Module, url string) (*javascript.Module, error) {
 				}
 
 				if id.ImportedDefaultBinding != nil {
-					importBindings[id.ImportedDefaultBinding.Data] = javascript.MemberExpression{
-						MemberExpression: &javascript.MemberExpression{
-							PrimaryExpression: &javascript.PrimaryExpression{
-								IdentifierReference: jToken(ib),
-							},
-						},
-						IdentifierName: jToken("default"),
-					}
+					importBindings[id.ImportedDefaultBinding.Data] = wrapMemberIdentifier(ib, jToken("default"))
 				}
 
 				if id.NamedImports != nil {
@@ -301,14 +266,7 @@ func Plugin(m *javascript.Module, url string) (*javascript.Module, error) {
 							tk = is.IdentifierName
 						}
 
-						importBindings[is.ImportedBinding.Data] = javascript.MemberExpression{
-							MemberExpression: &javascript.MemberExpression{
-								PrimaryExpression: &javascript.PrimaryExpression{
-									IdentifierReference: jToken(ib),
-								},
-							},
-							IdentifierName: tk,
-						}
+						importBindings[is.ImportedBinding.Data] = wrapMemberIdentifier(ib, tk)
 					}
 				}
 			}
@@ -317,51 +275,19 @@ func Plugin(m *javascript.Module, url string) (*javascript.Module, error) {
 		} else if li.ExportDeclaration != nil {
 			ed := li.ExportDeclaration
 			if ed.VariableStatement != nil {
-				moduleItems = append(moduleItems, javascript.ModuleItem{
-					StatementListItem: &javascript.StatementListItem{
-						Statement: &javascript.Statement{
-							VariableStatement: ed.VariableStatement,
-						},
-					},
-				})
+				moduleItems = append(moduleItems, wrapVariableStatement(ed.VariableStatement))
 			} else if ed.Declaration != nil {
-				moduleItems = append(moduleItems, javascript.ModuleItem{
-					StatementListItem: &javascript.StatementListItem{
-						Declaration: ed.Declaration,
-					},
-				})
+				moduleItems = append(moduleItems, wrapDeclaration(ed.Declaration))
 			} else if ed.DefaultFunction != nil {
 				if ed.DefaultFunction.BindingIdentifier != nil {
-					moduleItems = append(moduleItems, javascript.ModuleItem{
-						StatementListItem: &javascript.StatementListItem{
-							Declaration: &javascript.Declaration{
-								FunctionDeclaration: ed.DefaultFunction,
-							},
-						},
-					})
+					moduleItems = append(moduleItems, wrapFunctionDeclaration(ed.DefaultFunction))
 				}
 			} else if ed.DefaultClass != nil {
 				if ed.DefaultClass.BindingIdentifier != nil {
-					moduleItems = append(moduleItems, javascript.ModuleItem{
-						StatementListItem: &javascript.StatementListItem{
-							Declaration: &javascript.Declaration{
-								ClassDeclaration: ed.DefaultClass,
-							},
-						},
-					})
+					moduleItems = append(moduleItems, wrapClassDeclaration(ed.DefaultClass))
 				}
 			} else if ed.DefaultAssignmentExpression != nil {
-				moduleItems = append(moduleItems, javascript.ModuleItem{
-					StatementListItem: &javascript.StatementListItem{
-						Statement: &javascript.Statement{
-							ExpressionStatement: &javascript.Expression{
-								Expressions: []javascript.AssignmentExpression{
-									*ed.DefaultAssignmentExpression,
-								},
-							},
-						},
-					},
-				})
+				moduleItems = append(moduleItems, wrapAssignmentExpression(*ed.DefaultAssignmentExpression))
 			}
 		}
 	}
@@ -371,106 +297,9 @@ func Plugin(m *javascript.Module, url string) (*javascript.Module, error) {
 	if imports == 0 {
 		moduleItems = moduleItems[1:]
 	} else if imports == 1 {
-		moduleItems[0] = javascript.ModuleItem{
-			StatementListItem: &javascript.StatementListItem{
-				Declaration: &javascript.Declaration{
-					LexicalDeclaration: &javascript.LexicalDeclaration{
-						LetOrConst: javascript.Const,
-						BindingList: []javascript.LexicalBinding{
-							{
-								BindingIdentifier: importObjectBindings[0].SingleNameBinding,
-								Initializer: &javascript.AssignmentExpression{
-									ConditionalExpression: javascript.WrapConditional(&javascript.UnaryExpression{
-										UnaryOperators: []javascript.UnaryOperatorComments{{UnaryOperator: javascript.UnaryAwait}},
-										UpdateExpression: javascript.UpdateExpression{
-											LeftHandSideExpression: &javascript.LeftHandSideExpression{
-												CallExpression: &javascript.CallExpression{
-													MemberExpression: &javascript.MemberExpression{
-														PrimaryExpression: &javascript.PrimaryExpression{
-															IdentifierReference: jToken("include"),
-														},
-													},
-													Arguments: &javascript.Arguments{
-														ArgumentList: importURLsArray,
-													},
-												},
-											},
-										},
-									}),
-								},
-							},
-						},
-					},
-				},
-			},
-		}
+		moduleItems[0] = wrapIncludeCall(importObjectBindings[0].SingleNameBinding, importURLsArray)
 	} else {
-		moduleItems[0] = javascript.ModuleItem{
-			StatementListItem: &javascript.StatementListItem{
-				Declaration: &javascript.Declaration{
-					LexicalDeclaration: &javascript.LexicalDeclaration{
-						LetOrConst: javascript.Const,
-						BindingList: []javascript.LexicalBinding{
-							{
-								ArrayBindingPattern: &javascript.ArrayBindingPattern{
-									BindingElementList: importObjectBindings,
-								},
-								Initializer: &javascript.AssignmentExpression{
-									ConditionalExpression: javascript.WrapConditional(&javascript.UnaryExpression{
-										UnaryOperators: []javascript.UnaryOperatorComments{{UnaryOperator: javascript.UnaryAwait}},
-										UpdateExpression: javascript.UpdateExpression{
-											LeftHandSideExpression: &javascript.LeftHandSideExpression{
-												CallExpression: &javascript.CallExpression{
-													MemberExpression: &javascript.MemberExpression{
-														MemberExpression: &javascript.MemberExpression{
-															PrimaryExpression: &javascript.PrimaryExpression{
-																IdentifierReference: jToken("Promise"),
-															},
-														},
-														IdentifierName: jToken("all"),
-													},
-													Arguments: &javascript.Arguments{
-														ArgumentList: []javascript.Argument{
-															{
-																AssignmentExpression: javascript.AssignmentExpression{
-																	ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
-																		MemberExpression: &javascript.MemberExpression{
-																			MemberExpression: &javascript.MemberExpression{
-																				PrimaryExpression: &javascript.PrimaryExpression{
-																					ArrayLiteral: &javascript.ArrayLiteral{
-																						ElementList: importURLsArrayE,
-																					},
-																				},
-																			},
-																			IdentifierName: jToken("map"),
-																		},
-																		Arguments: &javascript.Arguments{
-																			ArgumentList: []javascript.Argument{
-																				{
-																					AssignmentExpression: javascript.AssignmentExpression{
-																						ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																							IdentifierReference: jToken("include"),
-																						}),
-																					},
-																				},
-																			},
-																		},
-																	}),
-																},
-															},
-														},
-													},
-												},
-											},
-										},
-									}),
-								},
-							},
-						},
-					},
-				},
-			},
-		}
+		moduleItems[0] = wrapIncludeAllCall(importObjectBindings, importURLsArrayE)
 	}
 
 	s := &javascript.Module{
