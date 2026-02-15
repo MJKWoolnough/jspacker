@@ -415,7 +415,11 @@ func (d *dependency) processBindingElement(snb *javascript.Token, abp *javascrip
 }
 
 func (d *dependency) resolveExport(binding string) *scope.Binding {
-	if export, ok := d.exports[binding]; !ok {
+	if binding == "*" {
+		return &scope.Binding{
+			Token: jToken(d.prefix),
+		}
+	} else if export, ok := d.exports[binding]; !ok {
 		return nil
 	} else if export.dependency != nil {
 		return export.dependency.resolveExport(export.binding)
