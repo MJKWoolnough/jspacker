@@ -162,54 +162,7 @@ func (d *dependency) handleImports(id *javascript.ImportDeclaration) error {
 func (d *dependency) handleNamespaceImport(iurl string, e *dependency, ns *javascript.Token) {
 	d.setImportBinding(ns.Data, e, "*")
 
-	d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
-		StatementListItem: &javascript.StatementListItem{
-			Declaration: &javascript.Declaration{
-				LexicalDeclaration: &javascript.LexicalDeclaration{
-					LetOrConst: javascript.Const,
-					BindingList: []javascript.LexicalBinding{
-						{
-							BindingIdentifier: ns,
-							Initializer: &javascript.AssignmentExpression{
-								ConditionalExpression: javascript.WrapConditional(javascript.UnaryExpression{
-									UnaryOperators: []javascript.UnaryOperatorComments{{UnaryOperator: javascript.UnaryAwait}},
-									UpdateExpression: javascript.UpdateExpression{
-										LeftHandSideExpression: &javascript.LeftHandSideExpression{
-											CallExpression: &javascript.CallExpression{
-												MemberExpression: &javascript.MemberExpression{
-													PrimaryExpression: &javascript.PrimaryExpression{
-														IdentifierReference: jToken("include"),
-													},
-												},
-												Arguments: &javascript.Arguments{
-													ArgumentList: []javascript.Argument{
-														{
-															AssignmentExpression: javascript.AssignmentExpression{
-																ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																	Literal: jToken(strconv.Quote(iurl)),
-																}),
-															},
-														},
-														{
-															AssignmentExpression: javascript.AssignmentExpression{
-																ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																	Literal: jToken("true"),
-																}),
-															},
-														},
-													},
-												},
-											},
-										},
-									},
-								}),
-							},
-						},
-					},
-				},
-			},
-		},
-	})
+	d.config.moduleItems = append(d.config.moduleItems, namespaceImport(ns, iurl))
 }
 
 func (d *dependency) handleNamedImports(e *dependency, ni *javascript.NamedImports) {
@@ -285,13 +238,7 @@ func (d *dependency) handleExportVariable(v *javascript.VariableStatement) {
 		d.processBindingElement(vd.BindingIdentifier, vd.ArrayBindingPattern, vd.ObjectBindingPattern)
 	}
 
-	d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
-		StatementListItem: &javascript.StatementListItem{
-			Statement: &javascript.Statement{
-				VariableStatement: v,
-			},
-		},
-	})
+	d.config.moduleItems = append(d.config.moduleItems, wrapVariableStatement(v))
 }
 
 func (d *dependency) handleExportDeclaration(ed *javascript.Declaration) {
@@ -305,11 +252,7 @@ func (d *dependency) handleExportDeclaration(ed *javascript.Declaration) {
 		}
 	}
 
-	d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
-		StatementListItem: &javascript.StatementListItem{
-			Declaration: ed,
-		},
-	})
+	d.config.moduleItems = append(d.config.moduleItems, wrapDeclaration(ed))
 }
 
 func (d *dependency) handleExportDefault(ed *javascript.ExportDeclaration) {
@@ -345,13 +288,7 @@ func (d *dependency) handleExportDefaultFunction(def *javascript.Token, f *javas
 		delete(d.scope.Bindings, def.Data)
 	}
 
-	d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
-		StatementListItem: &javascript.StatementListItem{
-			Declaration: &javascript.Declaration{
-				FunctionDeclaration: f,
-			},
-		},
-	})
+	d.config.moduleItems = append(d.config.moduleItems, wrapFunctionDeclaration(f))
 }
 
 func (d *dependency) handleExportDefaultClass(def *javascript.Token, c *javascript.ClassDeclaration) {
@@ -364,108 +301,22 @@ func (d *dependency) handleExportDefaultClass(def *javascript.Token, c *javascri
 		delete(d.scope.Bindings, def.Data)
 	}
 
-	d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
-		StatementListItem: &javascript.StatementListItem{
-			Declaration: &javascript.Declaration{
-				ClassDeclaration: c,
-			},
-		},
-	})
+	d.config.moduleItems = append(d.config.moduleItems, wrapClassDeclaration(c))
 }
 
 func (d *dependency) handleExportDefaultAssignment(def *javascript.Token, a *javascript.AssignmentExpression) {
-	d.config.moduleItems = append(d.config.moduleItems, javascript.ModuleItem{
-		StatementListItem: &javascript.StatementListItem{
-			Declaration: &javascript.Declaration{
-				LexicalDeclaration: &javascript.LexicalDeclaration{
-					LetOrConst: javascript.Const,
-					BindingList: []javascript.LexicalBinding{
-						{
-							BindingIdentifier: def,
-							Initializer:       a,
-						},
-					},
-				},
-			},
-		},
-	})
+	d.config.moduleItems = append(d.config.moduleItems, wrapDefaultAssignment(def, a))
 }
 
 func (d *dependency) addMeta() {
-	d.config.moduleItems[1].StatementListItem.Declaration.LexicalDeclaration.BindingList = append(d.config.moduleItems[1].StatementListItem.Declaration.LexicalDeclaration.BindingList, javascript.LexicalBinding{
-		BindingIdentifier: jToken(d.prefix + "import"),
-		Initializer: &javascript.AssignmentExpression{
-			ConditionalExpression: javascript.WrapConditional(&javascript.ObjectLiteral{
-				PropertyDefinitionList: []javascript.PropertyDefinition{
-					{
-						PropertyName: &javascript.PropertyName{
-							LiteralPropertyName: jToken("url"),
-						},
-						AssignmentExpression: &javascript.AssignmentExpression{
-							ConditionalExpression: javascript.WrapConditional(&javascript.AdditiveExpression{
-								AdditiveExpression: &javascript.AdditiveExpression{
-									MultiplicativeExpression: javascript.MultiplicativeExpression{
-										ExponentiationExpression: javascript.ExponentiationExpression{
-											UnaryExpression: javascript.UnaryExpression{
-												UpdateExpression: javascript.UpdateExpression{
-													LeftHandSideExpression: &javascript.LeftHandSideExpression{
-														NewExpression: &javascript.NewExpression{
-															MemberExpression: javascript.MemberExpression{
-																PrimaryExpression: &javascript.PrimaryExpression{
-																	IdentifierReference: jToken("o"),
-																},
-															},
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-								AdditiveOperator: javascript.AdditiveAdd,
-								MultiplicativeExpression: javascript.MultiplicativeExpression{
-									ExponentiationExpression: javascript.ExponentiationExpression{
-										UnaryExpression: javascript.UnaryExpression{
-											UpdateExpression: javascript.UpdateExpression{
-												LeftHandSideExpression: &javascript.LeftHandSideExpression{
-													NewExpression: &javascript.NewExpression{
-														MemberExpression: javascript.MemberExpression{
-															PrimaryExpression: &javascript.PrimaryExpression{
-																Literal: jToken(strconv.Quote(d.url)),
-															},
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							}),
-						},
-					},
-				},
-			}),
-		},
-	})
+	d.config.moduleItems[1].StatementListItem.Declaration.LexicalDeclaration.BindingList = append(d.config.moduleItems[1].StatementListItem.Declaration.LexicalDeclaration.BindingList, importMeta(d.prefix, d.url))
 }
 
 func (d *dependency) Handle(t javascript.Type) error {
 	if ce, ok := t.(*javascript.CallExpression); ok && isConditionalExpression(ce.ImportCall) {
 		d.HandleImportConditional(ce.ImportCall.ConditionalExpression)
 
-		ce.MemberExpression = &javascript.MemberExpression{
-			PrimaryExpression: &javascript.PrimaryExpression{
-				IdentifierReference: jToken("include"),
-			},
-		}
-		ce.Arguments = &javascript.Arguments{
-			ArgumentList: []javascript.Argument{
-				{
-					AssignmentExpression: *ce.ImportCall,
-				},
-			},
-		}
-		ce.ImportCall = nil
+		replaceImportCall(ce)
 	} else if ok && ce.MemberExpression != nil && ce.MemberExpression.PrimaryExpression != nil && ce.MemberExpression.PrimaryExpression.IdentifierReference != nil && ce.MemberExpression.PrimaryExpression.IdentifierReference.Data == "include" && ce.MemberExpression.MemberExpression == nil && ce.MemberExpression.Expression == nil && ce.MemberExpression.IdentifierName == nil && ce.MemberExpression.TemplateLiteral == nil && !ce.MemberExpression.SuperProperty && !ce.MemberExpression.NewTarget && !ce.MemberExpression.ImportMeta && ce.MemberExpression.Arguments == nil && !ce.SuperCall && ce.ImportCall == nil && ce.Arguments != nil && ce.Expression == nil && ce.IdentifierName == nil && ce.TemplateLiteral == nil && len(ce.Arguments.ArgumentList) == 1 {
 		d.HandleImportConditional(ce.Arguments.ArgumentList[0].AssignmentExpression.ConditionalExpression)
 	} else if d.config != nil {
