@@ -325,6 +325,8 @@ func outputJS(c *Config, s *javascript.Module) (err error) {
 		}
 
 		wait = cmd.Wait
+	} else {
+		wait = func() error { return nil }
 	}
 
 	if _, err = fmt.Fprintf(f, "%+s\n", s); err != nil {
