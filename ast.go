@@ -6,7 +6,7 @@ import (
 	"vimagination.zapto.org/javascript"
 )
 
-func namespaceImport(ns *javascript.Token, iurl string) javascript.ModuleItem {
+func namespaceImport(ns *javascript.Token, prefix string) javascript.ModuleItem {
 	return javascript.ModuleItem{
 		StatementListItem: &javascript.StatementListItem{
 			Declaration: &javascript.Declaration{
@@ -16,37 +16,8 @@ func namespaceImport(ns *javascript.Token, iurl string) javascript.ModuleItem {
 						{
 							BindingIdentifier: ns,
 							Initializer: &javascript.AssignmentExpression{
-								ConditionalExpression: javascript.WrapConditional(javascript.UnaryExpression{
-									UnaryOperators: []javascript.UnaryOperatorComments{{UnaryOperator: javascript.UnaryAwait}},
-									UpdateExpression: javascript.UpdateExpression{
-										LeftHandSideExpression: &javascript.LeftHandSideExpression{
-											CallExpression: &javascript.CallExpression{
-												MemberExpression: &javascript.MemberExpression{
-													PrimaryExpression: &javascript.PrimaryExpression{
-														IdentifierReference: jToken("include"),
-													},
-												},
-												Arguments: &javascript.Arguments{
-													ArgumentList: []javascript.Argument{
-														{
-															AssignmentExpression: javascript.AssignmentExpression{
-																ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																	Literal: jToken(strconv.Quote(iurl)),
-																}),
-															},
-														},
-														{
-															AssignmentExpression: javascript.AssignmentExpression{
-																ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																	Literal: jToken("true"),
-																}),
-															},
-														},
-													},
-												},
-											},
-										},
-									},
+								ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+									IdentifierReference: jToken(prefix),
 								}),
 							},
 						},

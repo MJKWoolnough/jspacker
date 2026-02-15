@@ -151,7 +151,7 @@ func (d *dependency) handleImports(id *javascript.ImportDeclaration) error {
 	}
 
 	if id.NameSpaceImport != nil {
-		d.handleNamespaceImport(iurl, e, id.NameSpaceImport)
+		d.handleNamespaceImport(e, id.NameSpaceImport)
 	} else if id.NamedImports != nil {
 		d.handleNamedImports(e, id.NamedImports)
 	}
@@ -159,10 +159,10 @@ func (d *dependency) handleImports(id *javascript.ImportDeclaration) error {
 	return nil
 }
 
-func (d *dependency) handleNamespaceImport(iurl string, e *dependency, ns *javascript.Token) {
+func (d *dependency) handleNamespaceImport(e *dependency, ns *javascript.Token) {
 	d.setImportBinding(ns.Data, e, "*")
 
-	d.config.moduleItems = append(d.config.moduleItems, namespaceImport(ns, iurl))
+	d.config.moduleItems = append(d.config.moduleItems, namespaceImport(ns, e.prefix))
 }
 
 func (d *dependency) handleNamedImports(e *dependency, ni *javascript.NamedImports) {
