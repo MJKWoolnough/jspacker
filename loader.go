@@ -17,14 +17,14 @@ func jToken(data string) *javascript.Token {
 }
 
 func (c *config) makeLoader() error {
-	bes := make([]javascript.BindingElement, 0, len(c.filesDone))
-	obs := make([]javascript.ArrayElement, 0, len(c.filesDone))
+	obs := make([]javascript.LexicalBinding, 0, len(c.filesDone))
 
 	for _, file := range sortedMap(c.filesDone) {
-		bes = append(bes, javascript.BindingElement{
-			SingleNameBinding: jToken(file.prefix),
-		})
-		fields := make([]javascript.ArrayElement, 0, len(file.exports))
+		if !file.requireNamespace && c.bare && !c.parseDynamic {
+			continue
+		}
+
+		fields := make([]javascript.PropertyDefinition, 0, len(file.exports))
 
 		for binding := range sortedMap(file.exports) {
 			b := file.resolveExport(binding)
@@ -33,39 +33,41 @@ func (c *config) makeLoader() error {
 				return fmt.Errorf("error resolving export %s (%s): %w", binding, file.url, ErrInvalidExport)
 			}
 
-			fields = append(fields, javascript.ArrayElement{
-				AssignmentExpression: javascript.AssignmentExpression{
-					ConditionalExpression: javascript.WrapConditional(&javascript.ArrayLiteral{
-						ElementList: []javascript.ArrayElement{
+			fields = append(fields, javascript.PropertyDefinition{
+				MethodDefinition: &javascript.MethodDefinition{
+					Type: javascript.MethodGetter,
+					ClassElementName: javascript.ClassElementName{
+						PropertyName: &javascript.PropertyName{
+							LiteralPropertyName: jToken(binding),
+						},
+					},
+					FunctionBody: javascript.Block{
+						StatementList: []javascript.StatementListItem{
 							{
-								AssignmentExpression: javascript.AssignmentExpression{
-									ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-										Literal: jToken(strconv.Quote(binding)),
-									}),
-								},
-							},
-							{
-								AssignmentExpression: javascript.AssignmentExpression{
-									ArrowFunction: &javascript.ArrowFunction{
-										FormalParameters: &javascript.FormalParameters{},
-										AssignmentExpression: &javascript.AssignmentExpression{
-											ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-												IdentifierReference: b.Token,
-											}),
+								Statement: &javascript.Statement{
+									Type: javascript.StatementReturn,
+									ExpressionStatement: &javascript.Expression{
+										Expressions: []javascript.AssignmentExpression{
+											{
+												ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+													IdentifierReference: b.Token,
+												}),
+											},
 										},
 									},
 								},
 							},
 						},
-					}),
+					},
 				},
 			})
 		}
 
-		obs = append(obs, javascript.ArrayElement{
-			AssignmentExpression: javascript.AssignmentExpression{
-				ConditionalExpression: javascript.WrapConditional(&javascript.ArrayLiteral{
-					ElementList: fields,
+		obs = append(obs, javascript.LexicalBinding{
+			BindingIdentifier: jToken(file.prefix),
+			Initializer: &javascript.AssignmentExpression{
+				ConditionalExpression: javascript.WrapConditional(&javascript.ObjectLiteral{
+					PropertyDefinitionList: fields,
 				}),
 			},
 		})
@@ -75,177 +77,8 @@ func (c *config) makeLoader() error {
 		StatementListItem: &javascript.StatementListItem{
 			Declaration: &javascript.Declaration{
 				LexicalDeclaration: &javascript.LexicalDeclaration{
-					LetOrConst: javascript.Const,
-					BindingList: []javascript.LexicalBinding{
-						{
-							ArrayBindingPattern: &javascript.ArrayBindingPattern{
-								BindingElementList: bes,
-							},
-							Initializer: &javascript.AssignmentExpression{
-								ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
-									MemberExpression: &javascript.MemberExpression{
-										MemberExpression: &javascript.MemberExpression{
-											PrimaryExpression: &javascript.PrimaryExpression{
-												ArrayLiteral: &javascript.ArrayLiteral{
-													ElementList: obs,
-												},
-											},
-										},
-										IdentifierName: jToken("map"),
-									},
-									Arguments: &javascript.Arguments{
-										ArgumentList: []javascript.Argument{
-											{
-												AssignmentExpression: javascript.AssignmentExpression{
-													ArrowFunction: &javascript.ArrowFunction{
-														BindingIdentifier: jToken("props"),
-														AssignmentExpression: &javascript.AssignmentExpression{
-															ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
-																MemberExpression: &javascript.MemberExpression{
-																	MemberExpression: &javascript.MemberExpression{
-																		PrimaryExpression: &javascript.PrimaryExpression{
-																			IdentifierReference: jToken("Object"),
-																		},
-																	},
-																	IdentifierName: jToken("freeze"),
-																},
-																Arguments: &javascript.Arguments{
-																	ArgumentList: []javascript.Argument{
-																		{
-																			AssignmentExpression: javascript.AssignmentExpression{
-																				ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
-																					MemberExpression: &javascript.MemberExpression{
-																						MemberExpression: &javascript.MemberExpression{
-																							PrimaryExpression: &javascript.PrimaryExpression{
-																								IdentifierReference: jToken("Object"),
-																							},
-																						},
-																						IdentifierName: jToken("defineProperties"),
-																					},
-																					Arguments: &javascript.Arguments{
-																						ArgumentList: []javascript.Argument{
-																							{
-																								AssignmentExpression: javascript.AssignmentExpression{
-																									ConditionalExpression: javascript.WrapConditional(&javascript.ObjectLiteral{}),
-																								},
-																							},
-																							{
-																								AssignmentExpression: javascript.AssignmentExpression{
-																									ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
-																										MemberExpression: &javascript.MemberExpression{
-																											MemberExpression: &javascript.MemberExpression{
-																												PrimaryExpression: &javascript.PrimaryExpression{
-																													IdentifierReference: jToken("Object"),
-																												},
-																											},
-																											IdentifierName: jToken("fromEntries"),
-																										},
-																										Arguments: &javascript.Arguments{
-																											ArgumentList: []javascript.Argument{
-																												{
-																													AssignmentExpression: javascript.AssignmentExpression{
-																														ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
-																															MemberExpression: &javascript.MemberExpression{
-																																MemberExpression: &javascript.MemberExpression{
-																																	PrimaryExpression: &javascript.PrimaryExpression{
-																																		IdentifierReference: jToken("props"),
-																																	},
-																																},
-																																IdentifierName: jToken("map"),
-																															},
-																															Arguments: &javascript.Arguments{
-																																ArgumentList: []javascript.Argument{
-																																	{
-																																		AssignmentExpression: javascript.AssignmentExpression{
-																																			ArrowFunction: &javascript.ArrowFunction{
-																																				FormalParameters: &javascript.FormalParameters{
-																																					FormalParameterList: []javascript.BindingElement{
-																																						{
-																																							ArrayBindingPattern: &javascript.ArrayBindingPattern{
-																																								BindingElementList: []javascript.BindingElement{
-																																									{
-																																										SingleNameBinding: jToken("prop"),
-																																									},
-																																									{
-																																										SingleNameBinding: jToken("get"),
-																																									},
-																																								},
-																																							},
-																																						},
-																																					},
-																																				},
-																																				AssignmentExpression: &javascript.AssignmentExpression{
-																																					ConditionalExpression: javascript.WrapConditional(&javascript.ArrayLiteral{
-																																						ElementList: []javascript.ArrayElement{
-																																							{
-																																								AssignmentExpression: javascript.AssignmentExpression{
-																																									ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																																										IdentifierReference: jToken("prop"),
-																																									}),
-																																								},
-																																							},
-																																							{
-																																								AssignmentExpression: javascript.AssignmentExpression{
-																																									ConditionalExpression: javascript.WrapConditional(&javascript.ObjectLiteral{
-																																										PropertyDefinitionList: []javascript.PropertyDefinition{
-																																											{
-																																												PropertyName: &javascript.PropertyName{
-																																													LiteralPropertyName: jToken("enumerable"),
-																																												},
-																																												AssignmentExpression: &javascript.AssignmentExpression{
-																																													ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																																														Literal: jToken("true"),
-																																													}),
-																																												},
-																																											},
-																																											{
-																																												PropertyName: &javascript.PropertyName{
-																																													LiteralPropertyName: jToken("get"),
-																																												},
-																																												AssignmentExpression: &javascript.AssignmentExpression{
-																																													ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																																														IdentifierReference: jToken("get"),
-																																													}),
-																																												},
-																																											},
-																																										},
-																																									}),
-																																								},
-																																							},
-																																						},
-																																					}),
-																																				},
-																																			},
-																																		},
-																																	},
-																																},
-																															},
-																														}),
-																													},
-																												},
-																											},
-																										},
-																									}),
-																								},
-																							},
-																						},
-																					},
-																				}),
-																			},
-																		},
-																	},
-																},
-															}),
-														},
-													},
-												},
-											},
-										},
-									},
-								}),
-							},
-						},
-					},
+					LetOrConst:  javascript.Const,
+					BindingList: obs,
 				},
 			},
 		},
