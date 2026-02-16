@@ -73,16 +73,18 @@ func (c *config) makeLoader() error {
 		})
 	}
 
-	c.moduleItems = slices.Insert(c.moduleItems, 0, javascript.ModuleItem{
-		StatementListItem: &javascript.StatementListItem{
-			Declaration: &javascript.Declaration{
-				LexicalDeclaration: &javascript.LexicalDeclaration{
-					LetOrConst:  javascript.Const,
-					BindingList: obs,
+	if len(obs) > 0 {
+		c.moduleItems = slices.Insert(c.moduleItems, 0, javascript.ModuleItem{
+			StatementListItem: &javascript.StatementListItem{
+				Declaration: &javascript.Declaration{
+					LexicalDeclaration: &javascript.LexicalDeclaration{
+						LetOrConst:  javascript.Const,
+						BindingList: obs,
+					},
 				},
 			},
-		},
-	})
+		})
+	}
 
 	if !c.bare || c.parseDynamic {
 		imports := make([]javascript.ArrayElement, 0, len(c.filesDone))
