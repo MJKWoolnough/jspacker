@@ -322,3 +322,261 @@ func wrapIncludeAllCall(importObjectBindings []javascript.BindingElement, import
 		},
 	}
 }
+
+func makeGetter(binding string, id *javascript.Token) javascript.PropertyDefinition {
+	return javascript.PropertyDefinition{
+		MethodDefinition: &javascript.MethodDefinition{
+			Type: javascript.MethodGetter,
+			ClassElementName: javascript.ClassElementName{
+				PropertyName: &javascript.PropertyName{
+					LiteralPropertyName: jToken(binding),
+				},
+			},
+			FunctionBody: javascript.Block{
+				StatementList: []javascript.StatementListItem{
+					{
+						Statement: &javascript.Statement{
+							Type: javascript.StatementReturn,
+							ExpressionStatement: &javascript.Expression{
+								Expressions: []javascript.AssignmentExpression{
+									{
+										ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+											IdentifierReference: id,
+										}),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func wrapNameSpaceFields(id string, fields []javascript.PropertyDefinition) javascript.LexicalBinding {
+	return javascript.LexicalBinding{
+		BindingIdentifier: jToken(id),
+		Initializer: &javascript.AssignmentExpression{
+			ConditionalExpression: javascript.WrapConditional(&javascript.ObjectLiteral{
+				PropertyDefinitionList: fields,
+			}),
+		},
+	}
+}
+
+func wrapConst(lds []javascript.LexicalBinding) javascript.ModuleItem {
+	return javascript.ModuleItem{
+		StatementListItem: &javascript.StatementListItem{
+			Declaration: &javascript.Declaration{
+				LexicalDeclaration: &javascript.LexicalDeclaration{
+					LetOrConst:  javascript.Const,
+					BindingList: lds,
+				},
+			},
+		},
+	}
+}
+
+func wrapURLNameSpace(url, prefix string) javascript.ArrayElement {
+	return javascript.ArrayElement{
+		AssignmentExpression: javascript.AssignmentExpression{
+			ConditionalExpression: javascript.WrapConditional(&javascript.ArrayLiteral{
+				ElementList: []javascript.ArrayElement{
+					{
+						AssignmentExpression: javascript.AssignmentExpression{
+							ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+								Literal: jToken(strconv.Quote(url)),
+							}),
+						},
+					},
+					{
+						AssignmentExpression: javascript.AssignmentExpression{
+							ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+								IdentifierReference: jToken(prefix),
+							}),
+						},
+					},
+				},
+			}),
+		},
+	}
+}
+
+func wrapImports(imports []javascript.ArrayElement) javascript.ModuleItem {
+	return javascript.ModuleItem{
+		StatementListItem: &javascript.StatementListItem{
+			Statement: &javascript.Statement{
+				ExpressionStatement: &javascript.Expression{
+					Expressions: []javascript.AssignmentExpression{
+						{
+							ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
+								MemberExpression: &javascript.MemberExpression{
+									MemberExpression: &javascript.MemberExpression{
+										PrimaryExpression: &javascript.PrimaryExpression{
+											IdentifierReference: jToken("Object"),
+										},
+									},
+									IdentifierName: jToken("defineProperty"),
+								},
+								Arguments: &javascript.Arguments{
+									ArgumentList: []javascript.Argument{
+										{
+											AssignmentExpression: javascript.AssignmentExpression{
+												ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+													IdentifierReference: jToken("globalThis"),
+												}),
+											},
+										},
+										{
+											AssignmentExpression: javascript.AssignmentExpression{
+												ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+													Literal: jToken("include"),
+												}),
+											},
+										},
+										{
+											AssignmentExpression: javascript.AssignmentExpression{
+												ConditionalExpression: javascript.WrapConditional(&javascript.ObjectLiteral{
+													PropertyDefinitionList: []javascript.PropertyDefinition{
+														{
+															PropertyName: &javascript.PropertyName{
+																LiteralPropertyName: jToken("value"),
+															},
+															AssignmentExpression: &javascript.AssignmentExpression{
+																ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
+																	MemberExpression: &javascript.MemberExpression{
+																		PrimaryExpression: &javascript.PrimaryExpression{
+																			ParenthesizedExpression: &javascript.ParenthesizedExpression{
+																				Expressions: []javascript.AssignmentExpression{
+																					{
+																						ArrowFunction: &javascript.ArrowFunction{
+																							FormalParameters: &javascript.FormalParameters{},
+																							FunctionBody: &javascript.Block{
+																								StatementList: []javascript.StatementListItem{
+																									{
+																										Declaration: &javascript.Declaration{
+																											LexicalDeclaration: &javascript.LexicalDeclaration{
+																												LetOrConst: javascript.Const,
+																												BindingList: []javascript.LexicalBinding{
+																													{
+																														BindingIdentifier: jToken("imports"),
+																														Initializer: &javascript.AssignmentExpression{
+																															ConditionalExpression: javascript.WrapConditional(javascript.MemberExpression{
+																																MemberExpression: &javascript.MemberExpression{
+																																	PrimaryExpression: &javascript.PrimaryExpression{
+																																		IdentifierReference: jToken("Map"),
+																																	},
+																																},
+																																Arguments: &javascript.Arguments{
+																																	ArgumentList: []javascript.Argument{
+																																		{
+																																			AssignmentExpression: javascript.AssignmentExpression{
+																																				ConditionalExpression: javascript.WrapConditional(&javascript.ArrayLiteral{
+																																					ElementList: imports,
+																																				}),
+																																			},
+																																		},
+																																	},
+																																},
+																															}),
+																														},
+																													},
+																												},
+																											},
+																										},
+																									},
+																									{
+																										Statement: &javascript.Statement{
+																											Type: javascript.StatementReturn,
+																											ExpressionStatement: &javascript.Expression{
+																												Expressions: []javascript.AssignmentExpression{
+																													{
+																														ArrowFunction: &javascript.ArrowFunction{
+																															BindingIdentifier: jToken("url"),
+																															AssignmentExpression: &javascript.AssignmentExpression{
+																																ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
+																																	MemberExpression: &javascript.MemberExpression{
+																																		MemberExpression: &javascript.MemberExpression{
+																																			PrimaryExpression: &javascript.PrimaryExpression{
+																																				IdentifierReference: jToken("Promise"),
+																																			},
+																																			IdentifierName: jToken("resolve"),
+																																		},
+																																	},
+																																	Arguments: &javascript.Arguments{
+																																		ArgumentList: []javascript.Argument{
+																																			{
+																																				AssignmentExpression: javascript.AssignmentExpression{
+																																					ConditionalExpression: &javascript.ConditionalExpression{
+																																						CoalesceExpression: &javascript.CoalesceExpression{
+																																							CoalesceExpressionHead: &javascript.CoalesceExpression{
+																																								BitwiseORExpression: javascript.WrapConditional(&javascript.CallExpression{
+																																									MemberExpression: &javascript.MemberExpression{
+																																										MemberExpression: &javascript.MemberExpression{
+																																											PrimaryExpression: &javascript.PrimaryExpression{
+																																												IdentifierReference: jToken("imports"),
+																																											},
+																																										},
+																																										IdentifierName: jToken("get"),
+																																									},
+																																									Arguments: &javascript.Arguments{
+																																										ArgumentList: []javascript.Argument{
+																																											{
+																																												AssignmentExpression: javascript.AssignmentExpression{
+																																													ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+																																														IdentifierReference: jToken("url"),
+																																													}),
+																																												},
+																																											},
+																																										},
+																																									},
+																																								}).LogicalORExpression.LogicalANDExpression.BitwiseORExpression,
+																																							},
+																																							BitwiseORExpression: javascript.WrapConditional(&javascript.CallExpression{
+																																								ImportCall: &javascript.AssignmentExpression{
+																																									ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+																																										IdentifierReference: jToken("url"),
+																																									}),
+																																								},
+																																							}).LogicalORExpression.LogicalANDExpression.BitwiseORExpression,
+																																						},
+																																					},
+																																				},
+																																			},
+																																		},
+																																	},
+																																}),
+																															},
+																														},
+																													},
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																					},
+																				},
+																			},
+																		},
+																	},
+																	Arguments: &javascript.Arguments{},
+																}),
+															},
+														},
+													},
+												}),
+											},
+										},
+									},
+								},
+							}),
+						},
+					},
+				},
+			},
+		},
+	}
+}
