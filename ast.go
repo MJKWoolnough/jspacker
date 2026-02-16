@@ -7,23 +7,31 @@ import (
 )
 
 func namespaceImport(ns *javascript.Token, prefix string) javascript.ModuleItem {
+	return wrapConst([]javascript.LexicalBinding{
+		{
+			BindingIdentifier: ns,
+			Initializer: &javascript.AssignmentExpression{
+				ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+					IdentifierReference: jToken(prefix),
+				}),
+			},
+		},
+	})
+}
+
+func wrapConst(lds []javascript.LexicalBinding) javascript.ModuleItem {
+	return wrapDeclaration(&javascript.Declaration{
+		LexicalDeclaration: &javascript.LexicalDeclaration{
+			LetOrConst:  javascript.Const,
+			BindingList: lds,
+		},
+	})
+}
+
+func wrapDeclaration(ed *javascript.Declaration) javascript.ModuleItem {
 	return javascript.ModuleItem{
 		StatementListItem: &javascript.StatementListItem{
-			Declaration: &javascript.Declaration{
-				LexicalDeclaration: &javascript.LexicalDeclaration{
-					LetOrConst: javascript.Const,
-					BindingList: []javascript.LexicalBinding{
-						{
-							BindingIdentifier: ns,
-							Initializer: &javascript.AssignmentExpression{
-								ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-									IdentifierReference: jToken(prefix),
-								}),
-							},
-						},
-					},
-				},
-			},
+			Declaration: ed,
 		},
 	}
 }
@@ -38,50 +46,25 @@ func wrapVariableStatement(v *javascript.VariableStatement) javascript.ModuleIte
 	}
 }
 
-func wrapDeclaration(ed *javascript.Declaration) javascript.ModuleItem {
-	return javascript.ModuleItem{
-		StatementListItem: &javascript.StatementListItem{
-			Declaration: ed,
-		},
-	}
-}
-
 func wrapFunctionDeclaration(f *javascript.FunctionDeclaration) javascript.ModuleItem {
-	return javascript.ModuleItem{
-		StatementListItem: &javascript.StatementListItem{
-			Declaration: &javascript.Declaration{
-				FunctionDeclaration: f,
-			},
-		},
-	}
+	return wrapDeclaration(&javascript.Declaration{
+		FunctionDeclaration: f,
+	})
 }
 
 func wrapClassDeclaration(c *javascript.ClassDeclaration) javascript.ModuleItem {
-	return javascript.ModuleItem{
-		StatementListItem: &javascript.StatementListItem{
-			Declaration: &javascript.Declaration{
-				ClassDeclaration: c,
-			},
-		},
-	}
+	return wrapDeclaration(&javascript.Declaration{
+		ClassDeclaration: c,
+	})
 }
 
 func wrapDefaultAssignment(def *javascript.Token, a *javascript.AssignmentExpression) javascript.ModuleItem {
-	return javascript.ModuleItem{
-		StatementListItem: &javascript.StatementListItem{
-			Declaration: &javascript.Declaration{
-				LexicalDeclaration: &javascript.LexicalDeclaration{
-					LetOrConst: javascript.Const,
-					BindingList: []javascript.LexicalBinding{
-						{
-							BindingIdentifier: def,
-							Initializer:       a,
-						},
-					},
-				},
-			},
+	return wrapConst([]javascript.LexicalBinding{
+		{
+			BindingIdentifier: def,
+			Initializer:       a,
 		},
-	}
+	})
 }
 
 func wrapAssignmentExpression(ae javascript.AssignmentExpression) javascript.ModuleItem {
@@ -171,30 +154,21 @@ func replaceImportCall(ce *javascript.CallExpression) {
 }
 
 func locationOrigin() javascript.ModuleItem {
-	return javascript.ModuleItem{
-		StatementListItem: &javascript.StatementListItem{
-			Declaration: &javascript.Declaration{
-				LexicalDeclaration: &javascript.LexicalDeclaration{
-					LetOrConst: javascript.Const,
-					BindingList: []javascript.LexicalBinding{
-						{
-							BindingIdentifier: jToken("o"),
-							Initializer: &javascript.AssignmentExpression{
-								ConditionalExpression: javascript.WrapConditional(javascript.MemberExpression{
-									MemberExpression: &javascript.MemberExpression{
-										PrimaryExpression: &javascript.PrimaryExpression{
-											IdentifierReference: jToken("location"),
-										},
-									},
-									IdentifierName: jToken("origin"),
-								}),
-							},
+	return wrapConst([]javascript.LexicalBinding{
+		{
+			BindingIdentifier: jToken("o"),
+			Initializer: &javascript.AssignmentExpression{
+				ConditionalExpression: javascript.WrapConditional(javascript.MemberExpression{
+					MemberExpression: &javascript.MemberExpression{
+						PrimaryExpression: &javascript.PrimaryExpression{
+							IdentifierReference: jToken("location"),
 						},
 					},
-				},
+					IdentifierName: jToken("origin"),
+				}),
 			},
 		},
-	}
+	})
 }
 
 func wrapArgument(arg string) javascript.Argument {
@@ -219,108 +193,90 @@ func wrapMemberIdentifier(id string, in *javascript.Token) javascript.MemberExpr
 }
 
 func wrapIncludeCall(ident *javascript.Token, args []javascript.Argument) javascript.ModuleItem {
-	return javascript.ModuleItem{
-		StatementListItem: &javascript.StatementListItem{
-			Declaration: &javascript.Declaration{
-				LexicalDeclaration: &javascript.LexicalDeclaration{
-					LetOrConst: javascript.Const,
-					BindingList: []javascript.LexicalBinding{
-						{
-							BindingIdentifier: ident,
-							Initializer: &javascript.AssignmentExpression{
-								ConditionalExpression: javascript.WrapConditional(&javascript.UnaryExpression{
-									UnaryOperators: []javascript.UnaryOperatorComments{{UnaryOperator: javascript.UnaryAwait}},
-									UpdateExpression: javascript.UpdateExpression{
-										LeftHandSideExpression: &javascript.LeftHandSideExpression{
-											CallExpression: &javascript.CallExpression{
-												MemberExpression: &javascript.MemberExpression{
-													PrimaryExpression: &javascript.PrimaryExpression{
-														IdentifierReference: jToken("include"),
-													},
-												},
-												Arguments: &javascript.Arguments{
-													ArgumentList: args,
-												},
-											},
-										},
+	return wrapConst([]javascript.LexicalBinding{
+		{
+			BindingIdentifier: ident,
+			Initializer: &javascript.AssignmentExpression{
+				ConditionalExpression: javascript.WrapConditional(&javascript.UnaryExpression{
+					UnaryOperators: []javascript.UnaryOperatorComments{{UnaryOperator: javascript.UnaryAwait}},
+					UpdateExpression: javascript.UpdateExpression{
+						LeftHandSideExpression: &javascript.LeftHandSideExpression{
+							CallExpression: &javascript.CallExpression{
+								MemberExpression: &javascript.MemberExpression{
+									PrimaryExpression: &javascript.PrimaryExpression{
+										IdentifierReference: jToken("include"),
 									},
-								}),
+								},
+								Arguments: &javascript.Arguments{
+									ArgumentList: args,
+								},
 							},
 						},
 					},
-				},
+				}),
 			},
 		},
-	}
+	})
 }
 
 func wrapIncludeAllCall(importObjectBindings []javascript.BindingElement, importURLsArrayE []javascript.ArrayElement) javascript.ModuleItem {
-	return javascript.ModuleItem{
-		StatementListItem: &javascript.StatementListItem{
-			Declaration: &javascript.Declaration{
-				LexicalDeclaration: &javascript.LexicalDeclaration{
-					LetOrConst: javascript.Const,
-					BindingList: []javascript.LexicalBinding{
-						{
-							ArrayBindingPattern: &javascript.ArrayBindingPattern{
-								BindingElementList: importObjectBindings,
-							},
-							Initializer: &javascript.AssignmentExpression{
-								ConditionalExpression: javascript.WrapConditional(&javascript.UnaryExpression{
-									UnaryOperators: []javascript.UnaryOperatorComments{{UnaryOperator: javascript.UnaryAwait}},
-									UpdateExpression: javascript.UpdateExpression{
-										LeftHandSideExpression: &javascript.LeftHandSideExpression{
-											CallExpression: &javascript.CallExpression{
-												MemberExpression: &javascript.MemberExpression{
+	return wrapConst([]javascript.LexicalBinding{
+		{
+			ArrayBindingPattern: &javascript.ArrayBindingPattern{
+				BindingElementList: importObjectBindings,
+			},
+			Initializer: &javascript.AssignmentExpression{
+				ConditionalExpression: javascript.WrapConditional(&javascript.UnaryExpression{
+					UnaryOperators: []javascript.UnaryOperatorComments{{UnaryOperator: javascript.UnaryAwait}},
+					UpdateExpression: javascript.UpdateExpression{
+						LeftHandSideExpression: &javascript.LeftHandSideExpression{
+							CallExpression: &javascript.CallExpression{
+								MemberExpression: &javascript.MemberExpression{
+									MemberExpression: &javascript.MemberExpression{
+										PrimaryExpression: &javascript.PrimaryExpression{
+											IdentifierReference: jToken("Promise"),
+										},
+									},
+									IdentifierName: jToken("all"),
+								},
+								Arguments: &javascript.Arguments{
+									ArgumentList: []javascript.Argument{
+										{
+											AssignmentExpression: javascript.AssignmentExpression{
+												ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
 													MemberExpression: &javascript.MemberExpression{
-														PrimaryExpression: &javascript.PrimaryExpression{
-															IdentifierReference: jToken("Promise"),
+														MemberExpression: &javascript.MemberExpression{
+															PrimaryExpression: &javascript.PrimaryExpression{
+																ArrayLiteral: &javascript.ArrayLiteral{
+																	ElementList: importURLsArrayE,
+																},
+															},
 														},
+														IdentifierName: jToken("map"),
 													},
-													IdentifierName: jToken("all"),
-												},
-												Arguments: &javascript.Arguments{
-													ArgumentList: []javascript.Argument{
-														{
-															AssignmentExpression: javascript.AssignmentExpression{
-																ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
-																	MemberExpression: &javascript.MemberExpression{
-																		MemberExpression: &javascript.MemberExpression{
-																			PrimaryExpression: &javascript.PrimaryExpression{
-																				ArrayLiteral: &javascript.ArrayLiteral{
-																					ElementList: importURLsArrayE,
-																				},
-																			},
-																		},
-																		IdentifierName: jToken("map"),
-																	},
-																	Arguments: &javascript.Arguments{
-																		ArgumentList: []javascript.Argument{
-																			{
-																				AssignmentExpression: javascript.AssignmentExpression{
-																					ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																						IdentifierReference: jToken("include"),
-																					}),
-																				},
-																			},
-																		},
-																	},
-																}),
+													Arguments: &javascript.Arguments{
+														ArgumentList: []javascript.Argument{
+															{
+																AssignmentExpression: javascript.AssignmentExpression{
+																	ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+																		IdentifierReference: jToken("include"),
+																	}),
+																},
 															},
 														},
 													},
-												},
+												}),
 											},
 										},
 									},
-								}),
+								},
 							},
 						},
 					},
-				},
+				}),
 			},
 		},
-	}
+	})
 }
 
 func makeGetter(binding string, id *javascript.Token) javascript.PropertyDefinition {
@@ -361,19 +317,6 @@ func wrapNameSpaceFields(id string, fields []javascript.PropertyDefinition) java
 			ConditionalExpression: javascript.WrapConditional(&javascript.ObjectLiteral{
 				PropertyDefinitionList: fields,
 			}),
-		},
-	}
-}
-
-func wrapConst(lds []javascript.LexicalBinding) javascript.ModuleItem {
-	return javascript.ModuleItem{
-		StatementListItem: &javascript.StatementListItem{
-			Declaration: &javascript.Declaration{
-				LexicalDeclaration: &javascript.LexicalDeclaration{
-					LetOrConst:  javascript.Const,
-					BindingList: lds,
-				},
-			},
 		},
 	}
 }
