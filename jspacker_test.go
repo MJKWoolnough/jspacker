@@ -17,7 +17,9 @@ func (l loader) load(url string) (*javascript.Module, error) {
 	if !ok {
 		return nil, os.ErrNotExist
 	}
+
 	tks := parser.NewStringTokeniser(d)
+
 	return javascript.ParseModule(&tks)
 }
 
@@ -221,8 +223,8 @@ func TestPackage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("test %d: unexpected err: %s", n+1, err)
 		}
-		output := strings.ReplaceAll(fmt.Sprintf("%s", s), "\t", "")
-		if output != test.Output {
+
+		if output := strings.ReplaceAll(fmt.Sprintf("%s", s), "\t", ""); output != test.Output {
 			t.Errorf("test %d: expecting output: %q\ngot: %q", n+1, test.Output, output)
 		}
 	}
@@ -256,16 +258,18 @@ func TestPlugin(t *testing.T) {
 		},
 	} {
 		tks := parser.NewStringTokeniser(test.Input)
+
 		m, err := javascript.ParseModule(&tks)
 		if err != nil {
 			t.Fatalf("test %d: unexpected err: %s", n+1, err)
 		}
+
 		s, err := Plugin(m, test.URL)
 		if err != nil {
 			t.Fatalf("test %d: unexpected err: %s", n+1, err)
 		}
-		output := fmt.Sprintf("%s", s)
-		if output != test.Output {
+
+		if output := fmt.Sprintf("%s", s); output != test.Output {
 			t.Errorf("test %d: expecting output: %q\ngot: %q", n+1, test.Output, output)
 		}
 	}
