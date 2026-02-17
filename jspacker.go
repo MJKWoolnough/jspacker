@@ -100,9 +100,12 @@ func OSLoad(base string) func(string) (*javascript.Module, error) {
 				err = errr
 			}
 		}
+
 		if f == nil {
 			return nil, fmt.Errorf("error opening file (%s): %w", urlPath, err)
 		}
+
+		defer f.Close()
 
 		rt := parser.NewReaderTokeniser(f)
 
@@ -113,9 +116,6 @@ func OSLoad(base string) func(string) (*javascript.Module, error) {
 		}
 
 		m, err := javascript.ParseModule(tks)
-
-		f.Close()
-
 		if err != nil {
 			return nil, fmt.Errorf("error parsing file (%s): %w", urlPath, err)
 		}
