@@ -162,8 +162,8 @@ func (d *dependency) handleImports(id *javascript.ImportDeclaration) error {
 
 func (d *dependency) handleNamespaceImport(e *dependency, ns *javascript.Token) {
 	d.setImportBinding(ns.Data, e, "*")
-	e.requireNamespace = true
 
+	e.requireNamespace = true
 	d.config.moduleItems = append(d.config.moduleItems, namespaceImport(ns, e.prefix))
 }
 
