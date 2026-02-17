@@ -196,27 +196,33 @@ func wrapIncludeCall(ident *javascript.Token, args []javascript.Argument) javasc
 	return wrapConst([]javascript.LexicalBinding{
 		{
 			BindingIdentifier: ident,
-			Initializer: &javascript.AssignmentExpression{
-				ConditionalExpression: javascript.WrapConditional(&javascript.UnaryExpression{
-					UnaryOperators: []javascript.UnaryOperatorComments{{UnaryOperator: javascript.UnaryAwait}},
-					UpdateExpression: javascript.UpdateExpression{
-						LeftHandSideExpression: &javascript.LeftHandSideExpression{
-							CallExpression: &javascript.CallExpression{
-								MemberExpression: &javascript.MemberExpression{
-									PrimaryExpression: &javascript.PrimaryExpression{
-										IdentifierReference: jToken("include"),
-									},
-								},
-								Arguments: &javascript.Arguments{
-									ArgumentList: args,
-								},
-							},
-						},
-					},
-				}),
+			Initializer: awaitCall(&javascript.MemberExpression{
+				PrimaryExpression: &javascript.PrimaryExpression{
+					IdentifierReference: jToken("include"),
+				},
 			},
+				args,
+			),
 		},
 	})
+}
+
+func awaitCall(me *javascript.MemberExpression, args []javascript.Argument) *javascript.AssignmentExpression {
+	return &javascript.AssignmentExpression{
+		ConditionalExpression: javascript.WrapConditional(&javascript.UnaryExpression{
+			UnaryOperators: []javascript.UnaryOperatorComments{{UnaryOperator: javascript.UnaryAwait}},
+			UpdateExpression: javascript.UpdateExpression{
+				LeftHandSideExpression: &javascript.LeftHandSideExpression{
+					CallExpression: &javascript.CallExpression{
+						MemberExpression: me,
+						Arguments: &javascript.Arguments{
+							ArgumentList: args,
+						},
+					},
+				},
+			},
+		}),
+	}
 }
 
 func wrapIncludeAllCall(importObjectBindings []javascript.BindingElement, importURLsArrayE []javascript.ArrayElement) javascript.ModuleItem {
@@ -225,56 +231,44 @@ func wrapIncludeAllCall(importObjectBindings []javascript.BindingElement, import
 			ArrayBindingPattern: &javascript.ArrayBindingPattern{
 				BindingElementList: importObjectBindings,
 			},
-			Initializer: &javascript.AssignmentExpression{
-				ConditionalExpression: javascript.WrapConditional(&javascript.UnaryExpression{
-					UnaryOperators: []javascript.UnaryOperatorComments{{UnaryOperator: javascript.UnaryAwait}},
-					UpdateExpression: javascript.UpdateExpression{
-						LeftHandSideExpression: &javascript.LeftHandSideExpression{
-							CallExpression: &javascript.CallExpression{
+			Initializer: awaitCall(&javascript.MemberExpression{
+				MemberExpression: &javascript.MemberExpression{
+					PrimaryExpression: &javascript.PrimaryExpression{
+						IdentifierReference: jToken("Promise"),
+					},
+				},
+				IdentifierName: jToken("all"),
+			},
+				[]javascript.Argument{
+					{
+						AssignmentExpression: javascript.AssignmentExpression{
+							ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
 								MemberExpression: &javascript.MemberExpression{
 									MemberExpression: &javascript.MemberExpression{
 										PrimaryExpression: &javascript.PrimaryExpression{
-											IdentifierReference: jToken("Promise"),
+											ArrayLiteral: &javascript.ArrayLiteral{
+												ElementList: importURLsArrayE,
+											},
 										},
 									},
-									IdentifierName: jToken("all"),
+									IdentifierName: jToken("map"),
 								},
 								Arguments: &javascript.Arguments{
 									ArgumentList: []javascript.Argument{
 										{
 											AssignmentExpression: javascript.AssignmentExpression{
-												ConditionalExpression: javascript.WrapConditional(&javascript.CallExpression{
-													MemberExpression: &javascript.MemberExpression{
-														MemberExpression: &javascript.MemberExpression{
-															PrimaryExpression: &javascript.PrimaryExpression{
-																ArrayLiteral: &javascript.ArrayLiteral{
-																	ElementList: importURLsArrayE,
-																},
-															},
-														},
-														IdentifierName: jToken("map"),
-													},
-													Arguments: &javascript.Arguments{
-														ArgumentList: []javascript.Argument{
-															{
-																AssignmentExpression: javascript.AssignmentExpression{
-																	ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
-																		IdentifierReference: jToken("include"),
-																	}),
-																},
-															},
-														},
-													},
+												ConditionalExpression: javascript.WrapConditional(&javascript.PrimaryExpression{
+													IdentifierReference: jToken("include"),
 												}),
 											},
 										},
 									},
 								},
-							},
+							}),
 						},
 					},
-				}),
-			},
+				},
+			),
 		},
 	})
 }
