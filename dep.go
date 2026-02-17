@@ -1,6 +1,7 @@
 package jspacker
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"path"
@@ -169,13 +170,7 @@ func (d *dependency) handleNamespaceImport(e *dependency, ns *javascript.Token) 
 
 func (d *dependency) handleNamedImports(e *dependency, ni *javascript.NamedImports) {
 	for _, is := range ni.ImportList {
-		tk := is.ImportedBinding
-
-		if is.IdentifierName != nil {
-			tk = is.IdentifierName
-		}
-
-		d.setImportBinding(is.ImportedBinding.Data, e, tk.Data)
+		d.setImportBinding(is.ImportedBinding.Data, e, cmp.Or(is.IdentifierName, is.ImportedBinding).Data)
 	}
 }
 
@@ -206,13 +201,7 @@ func (d *dependency) handleExportDeclarationWithFrom(ed *javascript.ExportDeclar
 		return err
 	} else if ed.ExportClause != nil {
 		for _, es := range ed.ExportClause.ExportList {
-			tk := es.IdentifierName.Data
-
-			if es.EIdentifierName != nil {
-				tk = es.EIdentifierName.Data
-			}
-
-			d.setExportBinding(tk, e, es.IdentifierName.Data)
+			d.setExportBinding(cmp.Or(es.EIdentifierName, es.IdentifierName).Data, e, es.IdentifierName.Data)
 		}
 	} else if ed.ExportFromClause != nil {
 		d.setExportBinding(ed.ExportFromClause.Data, e, "")
@@ -225,13 +214,7 @@ func (d *dependency) handleExportDeclarationWithFrom(ed *javascript.ExportDeclar
 
 func (d *dependency) handleExportClause(ec *javascript.ExportClause) {
 	for _, es := range ec.ExportList {
-		tk := es.IdentifierName.Data
-
-		if es.EIdentifierName != nil {
-			tk = es.EIdentifierName.Data
-		}
-
-		d.setExportBinding(tk, nil, es.IdentifierName.Data)
+		d.setExportBinding(cmp.Or(es.EIdentifierName, es.IdentifierName).Data, nil, es.IdentifierName.Data)
 	}
 }
 
