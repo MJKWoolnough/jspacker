@@ -38,19 +38,23 @@ func (c *config) makeLoader() error {
 		obs = append(obs, wrapNameSpaceFields(file.prefix, fields))
 	}
 
-	if len(obs) > 0 {
-		c.moduleItems = slices.Insert(c.moduleItems, 0, wrapConst(obs))
+	if len(obs) == 0 {
+		return nil
 	}
 
-	if !c.bare || c.parseDynamic {
-		imports := make([]javascript.ArrayElement, 0, len(c.filesDone))
+	c.moduleItems = slices.Insert(c.moduleItems, 0, wrapConst(obs))
 
-		for url, file := range sortedMap(c.filesDone) {
-			imports = append(imports, wrapURLNameSpace(url, file.prefix))
-		}
-
-		c.moduleItems = slices.Insert(c.moduleItems, 1, wrapImports(imports))
+	if c.bare && !c.parseDynamic {
+		return nil
 	}
+
+	imports := make([]javascript.ArrayElement, 0, len(c.filesDone))
+
+	for url, file := range sortedMap(c.filesDone) {
+		imports = append(imports, wrapURLNameSpace(url, file.prefix))
+	}
+
+	c.moduleItems = slices.Insert(c.moduleItems, 1, wrapImports(imports))
 
 	return nil
 }
