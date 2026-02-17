@@ -264,14 +264,13 @@ func readPlugin(base, input string) (*javascript.Module, error) {
 		return nil, fmt.Errorf("error opening url: %w", err)
 	}
 
+	defer f.Close()
+
 	tks := parser.NewReaderTokeniser(f)
-
-	m, err := javascript.ParseModule(&tks)
-
-	f.Close()
 
 	var s *javascript.Module
 
+	m, err := javascript.ParseModule(&tks)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing JavaScript module: %w", err)
 	} else if s, err = jspacker.Plugin(m, input); err != nil {
