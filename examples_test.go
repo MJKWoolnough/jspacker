@@ -33,8 +33,6 @@ func Example() {
 	}
 
 	// Output:
-	// const o = location.origin;
-	//
 	// const b_default = () => 1;
 	//
 	// const a_v = 2;
