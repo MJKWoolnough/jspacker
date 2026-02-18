@@ -137,31 +137,9 @@ func OSLoad(base string) func(string) (*javascript.Module, error) {
 // Package packages up multiple JavaScript modules into a single file, renaming
 // bindings to simulate imports.
 func Package(opts ...Option) (*javascript.Module, error) {
-	c := config{
-		filesDone: make(map[string]*dependency),
-		dependency: dependency{
-			requires: make(map[string]*dependency),
-		},
-		resolveURL: RelTo,
-	}
-
-	if c.loader == nil {
-		base, err := os.Getwd()
-		if err != nil {
-			return nil, fmt.Errorf("error getting current working directory: %w", err)
-		}
-
-		c.loader = OSLoad(base)
-	}
-
-	c.config = &c
-
-	for _, o := range opts {
-		o(&c)
-	}
-
-	if len(c.filesToDo) == 0 {
-		return nil, ErrNoFiles
+	c, err := createConfig(opts)
+	if err != nil {
+		return nil, err
 	}
 
 	c.moduleItems = slices.Insert(c.moduleItems, 0, locationOrigin())
@@ -201,6 +179,37 @@ func Package(opts ...Option) (*javascript.Module, error) {
 	return &javascript.Module{
 		ModuleListItems: c.moduleItems,
 	}, nil
+}
+
+func createConfig(opts []Option) (*config, error) {
+	c := &config{
+		filesDone: make(map[string]*dependency),
+		dependency: dependency{
+			requires: make(map[string]*dependency),
+		},
+		resolveURL: RelTo,
+	}
+
+	if c.loader == nil {
+		base, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("error getting current working directory: %w", err)
+		}
+
+		c.loader = OSLoad(base)
+	}
+
+	c.config = c
+
+	for _, o := range opts {
+		o(c)
+	}
+
+	if len(c.filesToDo) == 0 {
+		return nil, ErrNoFiles
+	}
+
+	return c, nil
 }
 
 // Plugin converts a single JavaScript module to make use of the processed
