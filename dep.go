@@ -29,6 +29,7 @@ type dependency struct {
 	done               bool
 	primary            bool
 	requireNamespace   bool
+	requireMeta        bool
 }
 
 func id2String(id uint) string {
@@ -294,6 +295,7 @@ func (d *dependency) handleExportDefaultAssignment(def *javascript.Token, a *jav
 }
 
 func (d *dependency) addMeta() {
+	d.config.requireMeta = true
 	d.config.moduleItems[1].StatementListItem.Declaration.LexicalDeclaration.BindingList = append(d.config.moduleItems[1].StatementListItem.Declaration.LexicalDeclaration.BindingList, importMeta(d.prefix, d.url))
 }
 
