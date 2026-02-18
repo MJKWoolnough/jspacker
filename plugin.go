@@ -75,69 +75,75 @@ func Plugin(m *javascript.Module, url string) (*javascript.Module, error) {
 func (p *plugin) process(m *javascript.Module, scope *scope.Scope) {
 	for _, li := range m.ModuleListItems {
 		if li.ImportDeclaration != nil {
-			id := li.ImportDeclaration
-			durl, _ := javascript.Unquote(id.ModuleSpecifier.Data)
-			iurl := p.d.RelTo(durl)
-
-			ib, ok := p.importURLs[iurl]
-			if !ok {
-				p.imports++
-
-				ib = id2String(p.imports)
-				p.importURLs[iurl] = ib
-				ae := wrapArgument(iurl)
-				p.importURLsArray = append(p.importURLsArray, ae)
-				p.importURLsArrayE = append(p.importURLsArrayE, javascript.ArrayElement{
-					AssignmentExpression: ae.AssignmentExpression,
-				})
-				p.importObjectBindings = append(p.importObjectBindings, javascript.BindingElement{
-					SingleNameBinding: jToken(ib),
-				})
-			}
-
-			if id.ImportClause != nil {
-				if id.NameSpaceImport != nil {
-					for _, binding := range scope.Bindings[li.ImportDeclaration.NameSpaceImport.Data] {
-						binding.Data = ib
-					}
-				}
-
-				if id.ImportedDefaultBinding != nil {
-					p.importBindings[id.ImportedDefaultBinding.Data] = wrapMemberIdentifier(ib, jToken("default"))
-				}
-
-				if id.NamedImports != nil {
-					for _, is := range id.NamedImports.ImportList {
-						tk := is.ImportedBinding
-
-						if is.IdentifierName != nil {
-							tk = is.IdentifierName
-						}
-
-						p.importBindings[is.ImportedBinding.Data] = wrapMemberIdentifier(ib, tk)
-					}
-				}
-			}
+			p.processImport(li.ImportDeclaration, scope)
 		} else if li.StatementListItem != nil {
 			p.moduleItems = append(p.moduleItems, li)
 		} else if li.ExportDeclaration != nil {
-			ed := li.ExportDeclaration
-			if ed.VariableStatement != nil {
-				p.moduleItems = append(p.moduleItems, wrapVariableStatement(ed.VariableStatement))
-			} else if ed.Declaration != nil {
-				p.moduleItems = append(p.moduleItems, wrapDeclaration(ed.Declaration))
-			} else if ed.DefaultFunction != nil {
-				if ed.DefaultFunction.BindingIdentifier != nil {
-					p.moduleItems = append(p.moduleItems, wrapFunctionDeclaration(ed.DefaultFunction))
-				}
-			} else if ed.DefaultClass != nil {
-				if ed.DefaultClass.BindingIdentifier != nil {
-					p.moduleItems = append(p.moduleItems, wrapClassDeclaration(ed.DefaultClass))
-				}
-			} else if ed.DefaultAssignmentExpression != nil {
-				p.moduleItems = append(p.moduleItems, wrapAssignmentExpression(*ed.DefaultAssignmentExpression))
+			p.processExport(li.ExportDeclaration)
+		}
+	}
+}
+
+func (p *plugin) processImport(id *javascript.ImportDeclaration, scope *scope.Scope) {
+	durl, _ := javascript.Unquote(id.ModuleSpecifier.Data)
+	iurl := p.d.RelTo(durl)
+
+	ib, ok := p.importURLs[iurl]
+	if !ok {
+		p.imports++
+
+		ib = id2String(p.imports)
+		p.importURLs[iurl] = ib
+		ae := wrapArgument(iurl)
+		p.importURLsArray = append(p.importURLsArray, ae)
+		p.importURLsArrayE = append(p.importURLsArrayE, javascript.ArrayElement{
+			AssignmentExpression: ae.AssignmentExpression,
+		})
+		p.importObjectBindings = append(p.importObjectBindings, javascript.BindingElement{
+			SingleNameBinding: jToken(ib),
+		})
+	}
+
+	if id.ImportClause != nil {
+		if id.NameSpaceImport != nil {
+			for _, binding := range scope.Bindings[id.NameSpaceImport.Data] {
+				binding.Data = ib
 			}
 		}
+
+		if id.ImportedDefaultBinding != nil {
+			p.importBindings[id.ImportedDefaultBinding.Data] = wrapMemberIdentifier(ib, jToken("default"))
+		}
+
+		if id.NamedImports != nil {
+			for _, is := range id.NamedImports.ImportList {
+				tk := is.ImportedBinding
+
+				if is.IdentifierName != nil {
+					tk = is.IdentifierName
+				}
+
+				p.importBindings[is.ImportedBinding.Data] = wrapMemberIdentifier(ib, tk)
+			}
+		}
+	}
+}
+
+func (p *plugin) processExport(ed *javascript.ExportDeclaration) {
+	if ed.VariableStatement != nil {
+		p.moduleItems = append(p.moduleItems, wrapVariableStatement(ed.VariableStatement))
+	} else if ed.Declaration != nil {
+		p.moduleItems = append(p.moduleItems, wrapDeclaration(ed.Declaration))
+	} else if ed.DefaultFunction != nil {
+		if ed.DefaultFunction.BindingIdentifier != nil {
+			p.moduleItems = append(p.moduleItems, wrapFunctionDeclaration(ed.DefaultFunction))
+		}
+	} else if ed.DefaultClass != nil {
+		if ed.DefaultClass.BindingIdentifier != nil {
+			p.moduleItems = append(p.moduleItems, wrapClassDeclaration(ed.DefaultClass))
+		}
+	} else if ed.DefaultAssignmentExpression != nil {
+		p.moduleItems = append(p.moduleItems, wrapAssignmentExpression(*ed.DefaultAssignmentExpression))
 	}
 }
 
