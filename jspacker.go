@@ -3,6 +3,7 @@ package jspacker
 
 import (
 	"fmt"
+	"iter"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -34,20 +35,12 @@ const (
 	tsSuffix = ".ts"
 )
 
-// OSLoad is the default loader for Package, with the base set to CWD.
-func OSLoad(base string) func(string) (*javascript.Module, error) {
-	return func(urlPath string) (*javascript.Module, error) {
-		var (
-			f   *os.File
-			err error
-		)
-
-		ts := strings.HasSuffix(base, tsSuffix)
-
-		for _, loader := range [...]func() (*os.File, error){
+func loadFns(base, urlPath string, ts *bool) iter.Seq[func() (*os.File, error)] {
+	return func(yield func(func() (*os.File, error)) bool) {
+		for _, fn := range [...]func() (*os.File, error){
 			func() (*os.File, error) { // Assume that any TS file will be more up-to-date by default
 				if strings.HasSuffix(urlPath, jsSuffix) {
-					ts = true
+					*ts = true
 
 					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath[:len(urlPath)-3]+tsSuffix)))
 				}
@@ -57,7 +50,7 @@ func OSLoad(base string) func(string) (*javascript.Module, error) {
 			func() (*os.File, error) { // Normal
 				f, err := os.Open(filepath.Join(base, filepath.FromSlash(urlPath)))
 				if err == nil {
-					ts = strings.HasSuffix(urlPath, tsSuffix)
+					*ts = strings.HasSuffix(urlPath, tsSuffix)
 				}
 
 				return f, err
@@ -66,7 +59,7 @@ func OSLoad(base string) func(string) (*javascript.Module, error) {
 				if u, err := url.Parse(urlPath); err == nil && u.Path != urlPath {
 					f, err := os.Open(filepath.Join(base, filepath.FromSlash(u.Path)))
 					if err == nil {
-						ts = strings.HasSuffix(urlPath, tsSuffix)
+						*ts = strings.HasSuffix(urlPath, tsSuffix)
 					}
 
 					return f, err
@@ -76,7 +69,7 @@ func OSLoad(base string) func(string) (*javascript.Module, error) {
 			},
 			func() (*os.File, error) { // Add TS extension
 				if !strings.HasSuffix(urlPath, tsSuffix) {
-					ts = true
+					*ts = true
 
 					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath+tsSuffix)))
 				}
@@ -91,6 +84,23 @@ func OSLoad(base string) func(string) (*javascript.Module, error) {
 				return nil, nil
 			},
 		} {
+			if !yield(fn) {
+				return
+			}
+		}
+	}
+}
+
+// OSLoad is the default loader for Package, with the base set to CWD.
+func OSLoad(base string) func(string) (*javascript.Module, error) {
+	return func(urlPath string) (*javascript.Module, error) {
+		var (
+			f   *os.File
+			err error
+		)
+		ts := strings.HasSuffix(base, tsSuffix)
+
+		for loader := range loadFns(base, urlPath, &ts) {
 			fb, errr := loader()
 			if fb != nil {
 				f = fb
