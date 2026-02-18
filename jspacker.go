@@ -142,8 +142,6 @@ func Package(opts ...Option) (*javascript.Module, error) {
 		return nil, err
 	}
 
-	c.moduleItems = slices.Insert(c.moduleItems, 0, locationOrigin())
-
 	for _, url := range c.filesToDo {
 		if !strings.HasPrefix(url, "/") {
 			return nil, fmt.Errorf("%w: %s", ErrInvalidURL, url)
@@ -174,6 +172,10 @@ func Package(opts ...Option) (*javascript.Module, error) {
 		return nil, err
 	} else if err := c.makeLoader(); err != nil {
 		return nil, err
+	}
+
+	if c.requireMeta {
+		c.moduleItems = slices.Insert(c.moduleItems, 0, locationOrigin())
 	}
 
 	return &javascript.Module{
