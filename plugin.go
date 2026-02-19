@@ -15,8 +15,8 @@ type plugin struct {
 	importObjectBindings []javascript.BindingElement
 	importURLsArrayE     []javascript.ArrayElement
 	importURLsArray      []javascript.Argument
-	moduleItems          []javascript.ModuleItem
-	d                    dependency
+	javascript.Module
+	d dependency
 }
 
 type importBindingMap map[string]javascript.MemberExpression
@@ -43,7 +43,9 @@ func Plugin(m *javascript.Module, url string) (*javascript.Module, error) {
 	p := plugin{
 		importURLs:     make(map[string]string),
 		importBindings: make(importBindingMap),
-		moduleItems:    make([]javascript.ModuleItem, 1, len(m.ModuleListItems)),
+		Module: javascript.Module{
+			ModuleListItems: make([]javascript.ModuleItem, 1, len(m.ModuleListItems)),
+		},
 		d: dependency{
 			config: &config{
 				resolveURL: RelTo,
@@ -61,15 +63,10 @@ func Plugin(m *javascript.Module, url string) (*javascript.Module, error) {
 	p.process(m, scope)
 	p.d.processBindings(scope)
 	p.addIncludes()
+	walk.Walk(&p.Module, &p.d)
+	walk.Walk(&p.Module, p.importBindings)
 
-	s := &javascript.Module{
-		ModuleListItems: p.moduleItems,
-	}
-
-	walk.Walk(s, &p.d)
-	walk.Walk(s, p.importBindings)
-
-	return s, nil
+	return &p.Module, nil
 }
 
 func (p *plugin) process(m *javascript.Module, scope *scope.Scope) {
@@ -77,7 +74,7 @@ func (p *plugin) process(m *javascript.Module, scope *scope.Scope) {
 		if li.ImportDeclaration != nil {
 			p.processImport(li.ImportDeclaration, scope)
 		} else if li.StatementListItem != nil {
-			p.moduleItems = append(p.moduleItems, li)
+			p.ModuleListItems = append(p.ModuleListItems, li)
 		} else if li.ExportDeclaration != nil {
 			p.processExport(li.ExportDeclaration)
 		}
@@ -131,28 +128,28 @@ func (p *plugin) processImport(id *javascript.ImportDeclaration, scope *scope.Sc
 
 func (p *plugin) processExport(ed *javascript.ExportDeclaration) {
 	if ed.VariableStatement != nil {
-		p.moduleItems = append(p.moduleItems, wrapVariableStatement(ed.VariableStatement))
+		p.ModuleListItems = append(p.ModuleListItems, wrapVariableStatement(ed.VariableStatement))
 	} else if ed.Declaration != nil {
-		p.moduleItems = append(p.moduleItems, wrapDeclaration(ed.Declaration))
+		p.ModuleListItems = append(p.ModuleListItems, wrapDeclaration(ed.Declaration))
 	} else if ed.DefaultFunction != nil {
 		if ed.DefaultFunction.BindingIdentifier != nil {
-			p.moduleItems = append(p.moduleItems, wrapFunctionDeclaration(ed.DefaultFunction))
+			p.ModuleListItems = append(p.ModuleListItems, wrapFunctionDeclaration(ed.DefaultFunction))
 		}
 	} else if ed.DefaultClass != nil {
 		if ed.DefaultClass.BindingIdentifier != nil {
-			p.moduleItems = append(p.moduleItems, wrapClassDeclaration(ed.DefaultClass))
+			p.ModuleListItems = append(p.ModuleListItems, wrapClassDeclaration(ed.DefaultClass))
 		}
 	} else if ed.DefaultAssignmentExpression != nil {
-		p.moduleItems = append(p.moduleItems, wrapAssignmentExpression(*ed.DefaultAssignmentExpression))
+		p.ModuleListItems = append(p.ModuleListItems, wrapAssignmentExpression(*ed.DefaultAssignmentExpression))
 	}
 }
 
 func (p *plugin) addIncludes() {
 	if p.imports == 0 {
-		p.moduleItems = p.moduleItems[1:]
+		p.ModuleListItems = p.ModuleListItems[1:]
 	} else if p.imports == 1 {
-		p.moduleItems[0] = wrapIncludeCall(p.importObjectBindings[0].SingleNameBinding, p.importURLsArray)
+		p.ModuleListItems[0] = wrapIncludeCall(p.importObjectBindings[0].SingleNameBinding, p.importURLsArray)
 	} else {
-		p.moduleItems[0] = wrapIncludeAllCall(p.importObjectBindings, p.importURLsArrayE)
+		p.ModuleListItems[0] = wrapIncludeAllCall(p.importObjectBindings, p.importURLsArrayE)
 	}
 }
