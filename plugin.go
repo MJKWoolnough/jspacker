@@ -102,26 +102,30 @@ func (p *plugin) processImport(id *javascript.ImportDeclaration, scope *scope.Sc
 	}
 
 	if id.ImportClause != nil {
-		if id.NameSpaceImport != nil {
-			for _, binding := range scope.Bindings[id.NameSpaceImport.Data] {
-				binding.Data = ib
-			}
+		p.processImportClause(id, scope, ib)
+	}
+}
+
+func (p *plugin) processImportClause(id *javascript.ImportDeclaration, scope *scope.Scope, ib string) {
+	if id.NameSpaceImport != nil {
+		for _, binding := range scope.Bindings[id.NameSpaceImport.Data] {
+			binding.Data = ib
 		}
+	}
 
-		if id.ImportedDefaultBinding != nil {
-			p.importBindings[id.ImportedDefaultBinding.Data] = wrapMemberIdentifier(ib, jToken("default"))
-		}
+	if id.ImportedDefaultBinding != nil {
+		p.importBindings[id.ImportedDefaultBinding.Data] = wrapMemberIdentifier(ib, jToken("default"))
+	}
 
-		if id.NamedImports != nil {
-			for _, is := range id.NamedImports.ImportList {
-				tk := is.ImportedBinding
+	if id.NamedImports != nil {
+		for _, is := range id.NamedImports.ImportList {
+			tk := is.ImportedBinding
 
-				if is.IdentifierName != nil {
-					tk = is.IdentifierName
-				}
-
-				p.importBindings[is.ImportedBinding.Data] = wrapMemberIdentifier(ib, tk)
+			if is.IdentifierName != nil {
+				tk = is.IdentifierName
 			}
+
+			p.importBindings[is.ImportedBinding.Data] = wrapMemberIdentifier(ib, tk)
 		}
 	}
 }
