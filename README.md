@@ -71,7 +71,10 @@ The `jspacker` command accepts the following flags
 ```
   -b string     js base dir
   -e            keep primary file exports
-  -i value      input file
+  -H string     parse import map from HTML file
+  -i string     input file
+  -M []string   minifier to pass code through, specified as JSON array of command words; e.g ["terser", "-m"]
+  -m {}         import map used to resolve import URLs; can be specified as a JSON file or as individual KEY=VALUE pairs (default {})
   -n            no exports
   -o string     output file (default "-")
   -p            export file as plugin
