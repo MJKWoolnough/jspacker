@@ -125,18 +125,18 @@ type htmlPage struct {
 }
 
 func run() error {
-	config, err := parseConfig()
+	c, err := parseConfig()
 	if err != nil {
 		return err
 	}
 
 	var s *javascript.Module
 
-	if config.plugin {
-		if s, err = readPlugin(config.base, config.filesTodo[0]); err != nil {
+	if c.plugin {
+		if s, err = readPlugin(c.base, c.filesTodo[0]); err != nil {
 			return err
 		}
-	} else if s, err = readModuleWithOptions(config); err != nil {
+	} else if s, err = c.readModuleWithOptions(); err != nil {
 		return err
 	}
 
@@ -144,7 +144,7 @@ func run() error {
 		s.ModuleListItems = s.ModuleListItems[1:]
 	}
 
-	return outputJS(config, s)
+	return c.outputJS(s)
 }
 
 func parseConfig() (*Config, error) {
@@ -280,7 +280,7 @@ func readPlugin(base, input string) (*javascript.Module, error) {
 	return s, nil
 }
 
-func readModuleWithOptions(c *Config) (*javascript.Module, error) {
+func (c *Config) readModuleWithOptions() (*javascript.Module, error) {
 	s, err := jspacker.Package(c.Options()...)
 	if err != nil {
 		return nil, fmt.Errorf("error generating output: %w", err)
@@ -289,7 +289,7 @@ func readModuleWithOptions(c *Config) (*javascript.Module, error) {
 	return s, nil
 }
 
-func outputJS(c *Config, s *javascript.Module) (err error) {
+func (c *Config) outputJS(s *javascript.Module) (err error) {
 	var f *os.File
 
 	if c.output == "-" {
@@ -304,10 +304,10 @@ func outputJS(c *Config, s *javascript.Module) (err error) {
 		}
 	}()
 
-	return writeOutput(f, c, s)
+	return c.writeOutput(f, s)
 }
 
-func writeOutput(w io.Writer, c *Config, m *javascript.Module) (err error) {
+func (c *Config) writeOutput(w io.Writer, m *javascript.Module) (err error) {
 	if len(c.minifier) > 0 {
 		pr, pw, errr := os.Pipe()
 		if err != nil {
