@@ -298,8 +298,6 @@ func outputJS(c *Config, s *javascript.Module) (err error) {
 		return fmt.Errorf("error creating output file: %w", err)
 	}
 
-	var wait func() error
-
 	if len(c.minifier) > 0 {
 		pr, pw, errr := os.Pipe()
 		if err != nil {
@@ -323,17 +321,19 @@ func outputJS(c *Config, s *javascript.Module) (err error) {
 			return err
 		}
 
-		wait = cmd.Wait
-	} else {
-		wait = func() error { return nil }
+		defer func() {
+			f.Close()
+
+			if errr := cmd.Wait(); err == nil {
+				err = errr
+			}
+		}()
 	}
 
 	if _, err = fmt.Fprintf(f, "%+s\n", s); err != nil {
 		return fmt.Errorf("error writing to output: %w", err)
 	} else if err = f.Close(); err != nil {
 		return fmt.Errorf("error closing output: %w", err)
-	} else if err = wait(); err != nil {
-		return err
 	}
 
 	return nil
