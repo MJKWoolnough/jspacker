@@ -238,6 +238,35 @@ func (c *Config) processHTMLInput() error {
 		lastPos = dec.InputOffset()
 	}
 
+	return c.writeHTML(state)
+}
+
+func (c *Config) writeHTML(state htmlState) error {
+	f, err := c.outputFile()
+	if err != nil {
+		return err
+	}
+
+	html := state.buf.String()
+
+	var lastPos int64
+
+	for _, script := range state.scripts {
+		f.WriteString(html[lastPos:script.tagStart])
+
+		if script.isMap {
+			if err := c.importMap.Import(strings.NewReader(html[script.contentStart:script.contentEnd])); err != nil {
+				return err
+			}
+		} else if script.src != "" {
+		} else {
+		}
+
+		lastPos = script.tagEnd
+	}
+
+	f.WriteString(html[lastPos:])
+
 	return nil
 }
 
