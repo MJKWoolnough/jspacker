@@ -228,28 +228,8 @@ func (c *Config) writeHTMLContents(f *os.File, h *htmlState) error {
 			if err := c.importMap.Import(strings.NewReader(html[script.contentStart:script.contentEnd])); err != nil {
 				return err
 			}
-		} else {
-			opts := c.Options()
-
-			f.WriteString(`<script type="module">`)
-
-			if script.src == "" {
-				opts = append(opts, jspacker.Loader(ScriptLoader(html[script.contentStart:script.contentEnd], c.base)))
-				c.filesTodo[0] = "/\x00"
-			} else {
-				c.filesTodo[0] = path.Join("/", script.src)
-			}
-
-			m, err := jspacker.Package(c.Options()...)
-			if err != nil {
-				return fmt.Errorf("error generating output: %w", err)
-			}
-
-			if err = c.writeOutput(f, m); err != nil {
-				return err
-			}
-
-			f.WriteString(`</script>`)
+		} else if err := c.processScript(f, html, script); err != nil {
+			return err
 		}
 
 		lastPos = script.tagEnd
@@ -258,6 +238,34 @@ func (c *Config) writeHTMLContents(f *os.File, h *htmlState) error {
 	f.WriteString(html[lastPos:])
 
 	return nil
+}
+
+func (c *Config) processScript(f *os.File, html string, script script) error {
+	opts := c.Options()
+
+	if _, err := f.WriteString(`<script type="module">`); err != nil {
+		return err
+	}
+
+	if script.src == "" {
+		opts = append(opts, jspacker.Loader(ScriptLoader(html[script.contentStart:script.contentEnd], c.base)))
+		c.filesTodo[0] = "/\x00"
+	} else {
+		c.filesTodo[0] = path.Join("/", script.src)
+	}
+
+	m, err := jspacker.Package(c.Options()...)
+	if err != nil {
+		return fmt.Errorf("error generating output: %w", err)
+	}
+
+	if err = c.writeOutput(f, m); err != nil {
+		return err
+	}
+
+	_, err = f.WriteString(`</script>`)
+
+	return err
 }
 
 func (c *Config) processJavascript() error {
