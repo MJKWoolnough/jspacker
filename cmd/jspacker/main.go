@@ -247,6 +247,13 @@ func (c *Config) writeHTML(state htmlState) error {
 		return err
 	}
 
+	if c.base == "" {
+		c.base, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	}
+
 	html := state.buf.String()
 
 	var lastPos int64
@@ -258,8 +265,28 @@ func (c *Config) writeHTML(state htmlState) error {
 			if err := c.importMap.Import(strings.NewReader(html[script.contentStart:script.contentEnd])); err != nil {
 				return err
 			}
-		} else if script.src != "" {
 		} else {
+			opts := c.Options()
+
+			f.WriteString(`<script type="module">`)
+
+			if script.src == "" {
+				opts = append(opts, jspacker.Loader(ScriptLoader(html[script.contentStart:script.contentEnd], c.base)))
+				c.filesTodo[0] = "/\x00"
+			} else {
+				c.filesTodo[0] = path.Join("/", script.src)
+			}
+
+			m, err := jspacker.Package(c.Options()...)
+			if err != nil {
+				return fmt.Errorf("error generating output: %w", err)
+			}
+
+			if err = c.writeOutput(f, m); err != nil {
+				return err
+			}
+
+			f.WriteString(`</script>`)
 		}
 
 		lastPos = script.tagEnd
@@ -474,7 +501,7 @@ func ScriptLoader(src, base string) func(string) (*javascript.Module, error) {
 	loader := jspacker.OSLoad(base)
 
 	return func(file string) (*javascript.Module, error) {
-		if file != "\x00" {
+		if file != "/\x00" {
 			return loader(file)
 		}
 
