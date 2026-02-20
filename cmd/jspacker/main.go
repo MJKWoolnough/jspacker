@@ -194,11 +194,17 @@ func (c *Config) processHTMLInput() error {
 	return c.writeHTML(h)
 }
 
-func (c *Config) writeHTML(state *htmlState) error {
+func (c *Config) writeHTML(state *htmlState) (err error) {
 	f, err := c.outputFile()
 	if err != nil {
 		return err
 	}
+
+	defer func() {
+		if errr := f.Close(); err == nil {
+			err = errr
+		}
+	}()
 
 	if c.base == "" {
 		c.base, err = os.Getwd()
