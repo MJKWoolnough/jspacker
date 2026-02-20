@@ -181,67 +181,20 @@ func (c *Config) processHTMLInput() error {
 
 	defer f.Close()
 
-	var state htmlState
-
-	dec := xml.NewDecoder(io.TeeReader(f, &state.buf))
-	dec.Strict = false
-	dec.AutoClose = xml.HTMLAutoClose
-	dec.Entity = xml.HTMLEntity
-
-	inScript := false
-
-	var lastPos int64
+	h := newHTMLState(f)
 
 	for {
-		tk, err := dec.Token()
-		if errors.Is(err, io.EOF) {
+		if err := h.processToken(); errors.Is(err, io.EOF) {
 			break
 		} else if err != nil {
 			return err
 		}
-
-		switch tk := tk.(type) {
-		case xml.StartElement:
-			if inScript || tk.Name.Local != "script" {
-				continue
-			}
-
-			s := script{
-				tagStart:     lastPos,
-				contentStart: dec.InputOffset(),
-			}
-
-			for _, attr := range tk.Attr {
-				switch attr.Name.Local {
-				case "type":
-					switch attr.Value {
-					case "importmap":
-						s.isMap = true
-					}
-				case "src":
-					s.src = attr.Value
-				}
-			}
-
-			inScript = true
-			state.scripts = append(state.scripts, s)
-		case xml.EndElement:
-			if !inScript || tk.Name.Local != "script" {
-				break
-			}
-
-			inScript = false
-			state.scripts[len(state.scripts)-1].contentEnd = lastPos
-			state.scripts[len(state.scripts)-1].tagEnd = dec.InputOffset()
-		}
-
-		lastPos = dec.InputOffset()
 	}
 
-	return c.writeHTML(state)
+	return c.writeHTML(h)
 }
 
-func (c *Config) writeHTML(state htmlState) error {
+func (c *Config) writeHTML(state *htmlState) error {
 	f, err := c.outputFile()
 	if err != nil {
 		return err
@@ -487,8 +440,75 @@ func (c *Config) writeOutput(w io.Writer, m *javascript.Module) (err error) {
 }
 
 type htmlState struct {
-	buf     strings.Builder
-	scripts []script
+	buf      strings.Builder
+	scripts  []script
+	dec      *xml.Decoder
+	lastPos  int64
+	inScript bool
+}
+
+func newHTMLState(r io.Reader) *htmlState {
+	h := new(htmlState)
+	h.dec = xml.NewDecoder(io.TeeReader(r, &h.buf))
+	h.dec.Strict = false
+	h.dec.AutoClose = xml.HTMLAutoClose
+	h.dec.Entity = xml.HTMLEntity
+
+	return h
+}
+
+func (h *htmlState) processToken() error {
+	tk, err := h.dec.Token()
+	if err != nil {
+		return err
+	}
+
+	switch tk := tk.(type) {
+	case xml.StartElement:
+		h.addScript(tk)
+	case xml.EndElement:
+		h.endScript(tk)
+	}
+
+	h.lastPos = h.dec.InputOffset()
+
+	return nil
+}
+
+func (h *htmlState) addScript(tk xml.StartElement) {
+	if h.inScript || tk.Name.Local != "script" {
+		return
+	}
+
+	s := script{
+		tagStart:     h.lastPos,
+		contentStart: h.dec.InputOffset(),
+	}
+
+	for _, attr := range tk.Attr {
+		switch attr.Name.Local {
+		case "type":
+			switch attr.Value {
+			case "importmap":
+				s.isMap = true
+			}
+		case "src":
+			s.src = attr.Value
+		}
+	}
+
+	h.inScript = true
+	h.scripts = append(h.scripts, s)
+}
+
+func (h *htmlState) endScript(tk xml.EndElement) {
+	if !h.inScript || tk.Name.Local != "script" {
+		return
+	}
+
+	h.inScript = false
+	h.scripts[len(h.scripts)-1].contentEnd = h.lastPos
+	h.scripts[len(h.scripts)-1].tagEnd = h.dec.InputOffset()
 }
 
 type script struct {
