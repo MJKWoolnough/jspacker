@@ -194,7 +194,7 @@ func (c *Config) processHTMLInput() error {
 	return c.writeHTML(h)
 }
 
-func (c *Config) writeHTML(state *htmlState) (err error) {
+func (c *Config) writeHTML(h *htmlState) (err error) {
 	f, err := c.outputFile()
 	if err != nil {
 		return err
@@ -213,11 +213,15 @@ func (c *Config) writeHTML(state *htmlState) (err error) {
 		}
 	}
 
-	html := state.buf.String()
+	return c.writeHTMLContents(f, h)
+}
+
+func (c *Config) writeHTMLContents(f *os.File, h *htmlState) error {
+	html := h.buf.String()
 
 	var lastPos int64
 
-	for _, script := range state.scripts {
+	for _, script := range h.scripts {
 		f.WriteString(html[lastPos:script.tagStart])
 
 		if script.isMap {
