@@ -470,6 +470,20 @@ type script struct {
 	isMap                                      bool
 }
 
+func ScriptLoader(src, base string) func(string) (*javascript.Module, error) {
+	loader := jspacker.OSLoad(base)
+
+	return func(file string) (*javascript.Module, error) {
+		if file != "\x00" {
+			return loader(file)
+		}
+
+		tk := parser.NewStringTokeniser(src)
+
+		return javascript.ParseModule(&tk)
+	}
+}
+
 var (
 	ErrInvalidImportMapping = errors.New("invalid import mapping")
 	ErrInvalidHTMLInput     = errors.New("must specify single HTML input file")
