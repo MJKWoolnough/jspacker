@@ -373,14 +373,21 @@ func (c *Config) readModuleWithOptions() (*javascript.Module, error) {
 	return s, nil
 }
 
-func (c *Config) outputJS(s *javascript.Module) (err error) {
-	var f *os.File
-
+func (c *Config) outputFile() (*os.File, error) {
 	if c.output == "-" {
-		f = os.Stdout
-	} else if f, err = os.Create(c.output); err != nil {
-		return fmt.Errorf("error creating output file: %w", err)
+		return os.Stdout, nil
 	}
+
+	f, err := os.Create(c.output)
+	if err != nil {
+		return nil, fmt.Errorf("error creating output file: %w", err)
+	}
+
+	return f, nil
+}
+
+func (c *Config) outputJS(s *javascript.Module) (err error) {
+	f, err := c.outputFile()
 
 	defer func() {
 		if errr := f.Close(); err == nil {
