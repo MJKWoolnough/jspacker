@@ -130,21 +130,11 @@ func run() error {
 		return err
 	}
 
-	var s *javascript.Module
-
-	if c.plugin {
-		if s, err = readPlugin(c.base, c.filesTodo[0]); err != nil {
-			return err
-		}
-	} else if s, err = c.readModuleWithOptions(); err != nil {
-		return err
+	if c.processHTML {
+		return c.processHTMLInput()
 	}
 
-	for len(s.ModuleListItems) > 0 && s.ModuleListItems[0].ImportDeclaration == nil && s.ModuleListItems[0].ExportDeclaration == nil && s.ModuleListItems[0].StatementListItem == nil {
-		s.ModuleListItems = s.ModuleListItems[1:]
-	}
-
-	return c.outputJS(s)
+	return c.processJavascript()
 }
 
 func parseConfig() (*Config, error) {
@@ -177,6 +167,99 @@ func parseConfig() (*Config, error) {
 	}
 
 	return config, nil
+}
+
+func (c *Config) processHTMLInput() error {
+	if len(c.filesTodo) != 1 {
+		return ErrInvalidHTMLInput
+	}
+
+	f, err := os.Open(c.filesTodo[0])
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	var state htmlState
+
+	dec := xml.NewDecoder(io.TeeReader(f, &state.buf))
+	dec.Strict = false
+	dec.AutoClose = xml.HTMLAutoClose
+	dec.Entity = xml.HTMLEntity
+
+	inScript := false
+
+	var lastPos int64
+
+	for {
+		tk, err := dec.Token()
+		if errors.Is(err, io.EOF) {
+			break
+		} else if err != nil {
+			return err
+		}
+
+		switch tk := tk.(type) {
+		case xml.StartElement:
+			if inScript || tk.Name.Local != "script" {
+				continue
+			}
+
+			s := script{
+				tagStart:     lastPos,
+				contentStart: dec.InputOffset(),
+			}
+
+			for _, attr := range tk.Attr {
+				switch attr.Name.Local {
+				case "type":
+					switch attr.Value {
+					case "importmap":
+						s.isMap = true
+					}
+				case "src":
+					s.src = attr.Value
+				}
+			}
+
+			inScript = true
+			state.scripts = append(state.scripts, s)
+		case xml.EndElement:
+			if !inScript || tk.Name.Local != "script" {
+				break
+			}
+
+			inScript = false
+			state.scripts[len(state.scripts)-1].contentEnd = lastPos
+			state.scripts[len(state.scripts)-1].tagEnd = dec.InputOffset()
+		}
+
+		lastPos = dec.InputOffset()
+	}
+
+	return nil
+}
+
+func (c *Config) processJavascript() error {
+	var (
+		s   *javascript.Module
+		err error
+	)
+
+	if c.plugin {
+		if s, err = readPlugin(c.base, c.filesTodo[0]); err != nil {
+			return err
+		}
+	} else if s, err = c.readModuleWithOptions(); err != nil {
+		return err
+	}
+
+	for len(s.ModuleListItems) > 0 && s.ModuleListItems[0].ImportDeclaration == nil && s.ModuleListItems[0].ExportDeclaration == nil && s.ModuleListItems[0].StatementListItem == nil {
+		s.ModuleListItems = s.ModuleListItems[1:]
+	}
+
+	return c.outputJS(s)
 }
 
 func (c *Config) setPaths() error {
@@ -340,4 +423,18 @@ func (c *Config) writeOutput(w io.Writer, m *javascript.Module) (err error) {
 	return nil
 }
 
-var ErrInvalidImportMapping = errors.New("invalid import mapping")
+type htmlState struct {
+	buf     strings.Builder
+	scripts []script
+}
+
+type script struct {
+	tagStart, tagEnd, contentStart, contentEnd int64
+	src                                        string
+	isMap                                      bool
+}
+
+var (
+	ErrInvalidImportMapping = errors.New("invalid import mapping")
+	ErrInvalidHTMLInput     = errors.New("must specify single HTML input file")
+)
