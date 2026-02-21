@@ -32,7 +32,7 @@ func (c *Config) processHTMLInput() error {
 		if err := h.processToken(); errors.Is(err, io.EOF) {
 			break
 		} else if err != nil {
-			return err
+			return fmt.Errorf("error parsing HTML input: %w", err)
 		}
 	}
 
