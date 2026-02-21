@@ -67,7 +67,9 @@ func (c *Config) writeHTMLContents(f *os.File, h *htmlState) error {
 	var lastPos int64
 
 	for _, script := range h.scripts {
-		f.WriteString(html[lastPos:script.tagStart])
+		if _, err := f.WriteString(html[lastPos:script.tagStart]); err != nil {
+			return err
+		}
 
 		if script.isMap {
 			if err := c.importMap.Import(strings.NewReader(html[script.contentStart:script.contentEnd])); err != nil {
@@ -80,9 +82,9 @@ func (c *Config) writeHTMLContents(f *os.File, h *htmlState) error {
 		lastPos = script.tagEnd
 	}
 
-	f.WriteString(html[lastPos:])
+	_, err := f.WriteString(html[lastPos:])
 
-	return nil
+	return err
 }
 
 func (c *Config) processScript(f *os.File, html string, script script) error {
