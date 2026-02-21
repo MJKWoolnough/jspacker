@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"vimagination.zapto.org/javascript"
 	"vimagination.zapto.org/jspacker"
 )
 
@@ -244,6 +245,18 @@ func (c *Config) Options() []jspacker.Option {
 	}
 
 	return options
+}
+
+func (c *Config) outputJS(s *javascript.Module) (err error) {
+	f, err := c.outputFile()
+
+	defer func() {
+		if errr := f.Close(); err == nil {
+			err = fmt.Errorf("error closing output: %w", errr)
+		}
+	}()
+
+	return c.writeOutput(f, s)
 }
 
 var (

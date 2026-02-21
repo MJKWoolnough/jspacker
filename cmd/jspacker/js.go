@@ -64,7 +64,7 @@ func (c *Config) readModuleWithOptions() (*javascript.Module, error) {
 	return s, nil
 }
 
-func (c *Config) outputFile() (*os.File, error) {
+func (c *Config) outputFile() (io.WriteCloser, error) {
 	if c.output == "-" {
 		return os.Stdout, nil
 	}
@@ -75,18 +75,6 @@ func (c *Config) outputFile() (*os.File, error) {
 	}
 
 	return f, nil
-}
-
-func (c *Config) outputJS(s *javascript.Module) (err error) {
-	f, err := c.outputFile()
-
-	defer func() {
-		if errr := f.Close(); err == nil {
-			err = fmt.Errorf("error closing output: %w", errr)
-		}
-	}()
-
-	return c.writeOutput(f, s)
 }
 
 func (c *Config) writeOutput(w io.Writer, m *javascript.Module) (err error) {
