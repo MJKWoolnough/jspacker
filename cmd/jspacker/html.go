@@ -61,13 +61,13 @@ func (c *Config) writeHTML(h *htmlState) (err error) {
 	return c.writeHTMLContents(f, h)
 }
 
-func (c *Config) writeHTMLContents(f *os.File, h *htmlState) error {
+func (c *Config) writeHTMLContents(w io.Writer, h *htmlState) error {
 	html := h.buf.String()
 
 	var lastPos int64
 
 	for _, script := range h.scripts {
-		if _, err := f.WriteString(html[lastPos:script.tagStart]); err != nil {
+		if _, err := io.WriteString(w, html[lastPos:script.tagStart]); err != nil {
 			return err
 		}
 
@@ -75,22 +75,22 @@ func (c *Config) writeHTMLContents(f *os.File, h *htmlState) error {
 			if err := c.importMap.Import(strings.NewReader(html[script.contentStart:script.contentEnd])); err != nil {
 				return err
 			}
-		} else if err := c.processScript(f, html, script); err != nil {
+		} else if err := c.processScript(w, html, script); err != nil {
 			return err
 		}
 
 		lastPos = script.tagEnd
 	}
 
-	_, err := f.WriteString(html[lastPos:])
+	_, err := io.WriteString(w, html[lastPos:])
 
 	return err
 }
 
-func (c *Config) processScript(f *os.File, html string, script script) error {
+func (c *Config) processScript(w io.Writer, html string, script script) error {
 	opts := c.Options()
 
-	if _, err := f.WriteString(`<script type="module">`); err != nil {
+	if _, err := io.WriteString(w, `<script type="module">`); err != nil {
 		return err
 	}
 
@@ -106,11 +106,11 @@ func (c *Config) processScript(f *os.File, html string, script script) error {
 		return fmt.Errorf("error generating output: %w", err)
 	}
 
-	if err = c.writeOutput(f, m); err != nil {
+	if err = c.writeOutput(w, m); err != nil {
 		return err
 	}
 
-	_, err = f.WriteString(`</script>`)
+	_, err = io.WriteString(w, `</script>`)
 
 	return err
 }
