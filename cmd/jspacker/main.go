@@ -1,6 +1,7 @@
 package main
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
@@ -13,16 +14,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"vimagination.zapto.org/javascript"
 	"vimagination.zapto.org/jspacker"
 )
 
 type Config struct {
-	output, base, html                      string
-	filesTodo                               Inputs
-	plugin, noExports, exports, processHTML bool
-	importMap                               ImportMap
-	minifier                                Minifier
+	output, base, html                                string
+	filesTodo                                         Inputs
+	plugin, noExports, exports, processHTML, compress bool
+	importMap                                         ImportMap
+	minifier                                          Minifier
 }
 
 type Inputs []string
@@ -148,6 +148,7 @@ func parseConfig() (*Config, error) {
 	flag.Var(config.importMap, "m", "import map used to resolve import URLs; can be specified as a JSON file or as individual KEY=VALUE pairs")
 	flag.StringVar(&config.html, "H", "", "parse import map from HTML file")
 	flag.Var(&config.minifier, "M", "minifier to pass code through, specified as JSON array of command words; e.g [\"terser\", \"-m\"]")
+	flag.BoolVar(&config.compress, "z", false, "gzip compress output")
 	flag.Parse()
 
 	if config.plugin && len(config.filesTodo) != 1 {
@@ -247,16 +248,44 @@ func (c *Config) Options() []jspacker.Option {
 	return options
 }
 
-func (c *Config) outputJS(s *javascript.Module) (err error) {
-	f, err := c.outputFile()
+func (c *Config) outputFile() (io.WriteCloser, error) {
+	if c.output == "-" {
+		return os.Stdout, nil
+	}
 
+	f, err := os.Create(c.output)
+	if err != nil {
+		return nil, fmt.Errorf("error creating output file: %w", err)
+	}
+
+	if !c.compress {
+		return f, nil
+	}
+
+	g, err := gzip.NewWriterLevel(f, gzip.BestCompression)
+	if err != nil {
+		return nil, err
+	}
+
+	return &compressedFile{
+		Writer: g,
+		file:   f,
+	}, nil
+}
+
+type compressedFile struct {
+	*gzip.Writer
+	file *os.File
+}
+
+func (c *compressedFile) Close() (err error) {
 	defer func() {
-		if errr := f.Close(); err == nil {
-			err = fmt.Errorf("error closing output: %w", errr)
+		if errr := c.file.Close(); err == nil {
+			err = errr
 		}
 	}()
 
-	return c.writeOutput(f, s)
+	return c.Writer.Close()
 }
 
 var (
