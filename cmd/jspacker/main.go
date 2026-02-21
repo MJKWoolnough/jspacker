@@ -288,7 +288,4 @@ func (c *compressedFile) Close() (err error) {
 	return c.Writer.Close()
 }
 
-var (
-	ErrInvalidImportMapping = errors.New("invalid import mapping")
-	ErrInvalidHTMLInput     = errors.New("must specify single HTML input file")
-)
+var ErrInvalidImportMapping = errors.New("invalid import mapping")

@@ -206,3 +206,5 @@ func ScriptLoader(src, base string) func(string) (*javascript.Module, error) {
 		return javascript.ParseModule(&tk)
 	}
 }
+
+var ErrInvalidHTMLInput = errors.New("must specify single HTML input file")
