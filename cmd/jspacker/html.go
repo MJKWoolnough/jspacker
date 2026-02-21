@@ -95,7 +95,7 @@ func (c *Config) processScript(w io.Writer, html string, script script) error {
 	}
 
 	if script.src == "" {
-		opts = append(opts, jspacker.Loader(ScriptLoader(html[script.contentStart:script.contentEnd], c.base)))
+		opts = append(opts, jspacker.Loader(scriptLoader(html[script.contentStart:script.contentEnd], c.base)))
 		c.filesTodo[0] = "/\x00"
 	} else {
 		c.filesTodo[0] = path.Join("/", script.src)
@@ -193,7 +193,7 @@ type script struct {
 	isMap                                      bool
 }
 
-func ScriptLoader(src, base string) func(string) (*javascript.Module, error) {
+func scriptLoader(src, base string) func(string) (*javascript.Module, error) {
 	loader := jspacker.OSLoad(base)
 
 	return func(file string) (*javascript.Module, error) {
