@@ -69,6 +69,7 @@ Includes command `vimagination.zapto.org/jspacker/cmd/jspacker` to combine multi
 The `jspacker` command accepts the following flags
 
 ```
+  -P            process input file as HTML, packing JavaScript sources in-place (implies -H with the input file)
   -b string     js base dir
   -e            keep primary file exports
   -H string     parse import map from HTML file
@@ -78,6 +79,7 @@ The `jspacker` command accepts the following flags
   -n            no exports
   -o string     output file (default "-")
   -p            export file as plugin
+  -z            gzip compress output
 ```
 
 ### Command Example
