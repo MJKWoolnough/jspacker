@@ -18,11 +18,11 @@ import (
 )
 
 type Config struct {
-	output, base, html                                string
-	filesTodo                                         Inputs
-	plugin, noExports, exports, processHTML, compress bool
-	importMap                                         ImportMap
-	minifier                                          Minifier
+	output, base, html                                            string
+	filesTodo                                                     Inputs
+	plugin, noExports, exports, processHTML, processCSS, compress bool
+	importMap                                                     ImportMap
+	minifier                                                      Minifier
 }
 
 type Inputs []string
@@ -145,6 +145,7 @@ func parseConfig() (*Config, error) {
 	flag.BoolVar(&config.noExports, "n", false, "no exports")
 	flag.BoolVar(&config.exports, "e", false, "keep primary file exports")
 	flag.BoolVar(&config.processHTML, "P", false, "process input file as HTML, packing JavaScript sources in-place (implies -H with the input file)")
+	flag.BoolVar(&config.processCSS, "c", false, "embed linked CSS in HTML file")
 	flag.Var(config.importMap, "m", "import map used to resolve import URLs; can be specified as a JSON file or as individual KEY=VALUE pairs")
 	flag.StringVar(&config.html, "H", "", "parse import map from HTML file")
 	flag.Var(&config.minifier, "M", "minifier to pass code through, specified as JSON array of command words; e.g [\"terser\", \"-m\"]")
