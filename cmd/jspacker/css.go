@@ -82,5 +82,11 @@ const (
 )
 
 func parseImports(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
+	if p.Accept(css.TokenWhitespace, css.TokenCDO, css.TokenCDC, css.TokenComment) {
+		p.AcceptRun(css.TokenWhitespace, css.TokenCDO, css.TokenCDC, css.TokenComment)
+
+		return p.Return(phraseWhitespace, parseImports)
+	}
+
 	return p.Done()
 }
