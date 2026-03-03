@@ -162,5 +162,9 @@ func rest(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 		return p.ReturnError(p.GetError())
 	}
 
+	if p.Len() == 0 {
+		return p.Done()
+	}
+
 	return p.Return(phraseRemaining, (*parser.Parser).Done)
 }
