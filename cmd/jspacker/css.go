@@ -116,6 +116,8 @@ func parseImports(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 				}
 
 				acceptWhitespaceComments(p)
+			} else if p.AcceptToken(parser.Token{Type: css.TokenIdent, Data: "layer"}) {
+				acceptWhitespaceComments(p)
 			}
 
 			if p.AcceptToken(parser.Token{Type: css.TokenFunction, Data: "supports("}) {
