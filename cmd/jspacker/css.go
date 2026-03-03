@@ -88,5 +88,69 @@ func parseImports(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 		return p.Return(phraseWhitespace, parseImports)
 	}
 
-	return p.Done()
+	if p.AcceptToken(parser.Token{Type: css.TokenAtKeyword, Data: "@import"}) {
+		p.AcceptRun(css.TokenWhitespace, css.TokenCDO, css.TokenCDC, css.TokenComment)
+
+		if p.Accept(css.TokenString, css.TokenURL) {
+			p.AcceptRun(css.TokenWhitespace, css.TokenCDO, css.TokenCDC, css.TokenComment)
+
+			if p.AcceptToken(parser.Token{Type: css.TokenFunction, Data: "layer("}) {
+				if !p.Accept(css.TokenIdent) {
+					return rest(p)
+				}
+
+				for p.AcceptToken(parser.Token{Type: css.TokenDelim, Data: "."}) {
+					if !p.Accept(css.TokenIdent) {
+						return rest(p)
+					}
+				}
+
+				if !p.Accept(css.TokenCloseParen) {
+					return rest(p)
+				}
+
+				p.AcceptRun(css.TokenWhitespace, css.TokenCDO, css.TokenCDC, css.TokenComment)
+			}
+
+			if p.AcceptToken(parser.Token{Type: css.TokenFunction, Data: "supports("}) {
+				depth := 1
+
+			Loop:
+				for {
+					switch p.ExceptRun(css.TokenCloseParen, css.TokenOpenParen, css.TokenFunction) {
+					case css.TokenCloseParen:
+						p.Next()
+
+						depth--
+
+						if depth == 0 {
+							break Loop
+						}
+					case css.TokenOpenParen, css.TokenFunction:
+						p.Next()
+
+						depth++
+					default:
+						return rest(p)
+					}
+				}
+
+				p.AcceptRun(css.TokenWhitespace, css.TokenCDO, css.TokenCDC, css.TokenComment)
+			}
+
+			if p.ExceptRun(css.TokenSemiColon) == css.TokenSemiColon {
+				return p.Return(phraseImport, parseImports)
+			}
+		}
+	}
+
+	return rest(p)
+}
+
+func rest(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
+	if p.ExceptRun(parser.TokenDone, parser.TokenError) == parser.TokenError {
+		return p.ReturnError(p.GetError())
+	}
+
+	return p.Return(phraseRemaining, (*parser.Parser).Done)
 }
