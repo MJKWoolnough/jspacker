@@ -36,9 +36,7 @@ func combineCSS(loader cssLoader, w io.Writer) error {
 
 	defer r.Close()
 
-	p := parser.New(*css.CreateTokeniser(parser.NewReaderTokeniser(r), false))
-
-	p.PhraserState(parseImports)
+	p := createCSSParser(r)
 
 	for {
 		ph, err := p.GetPhrase()
@@ -65,6 +63,14 @@ func combineCSS(loader cssLoader, w io.Writer) error {
 	}
 }
 
+func createCSSParser(r io.Reader) *parser.Parser {
+	p := parser.New(*css.CreateTokeniser(parser.NewReaderTokeniser(r), false))
+
+	p.PhraserState(parseImports)
+
+	return &p
+}
+
 func writeTokens(w io.Writer, tks []parser.Token) error {
 	for _, tk := range tks {
 		if _, err := io.WriteString(w, tk.Data); err != nil {
@@ -83,16 +89,16 @@ const (
 
 func parseImports(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 	if p.Accept(css.TokenWhitespace, css.TokenCDO, css.TokenCDC, css.TokenComment) {
-		p.AcceptRun(css.TokenWhitespace, css.TokenCDO, css.TokenCDC, css.TokenComment)
+		acceptWhitespaceComments(p)
 
 		return p.Return(phraseWhitespace, parseImports)
 	}
 
 	if p.AcceptToken(parser.Token{Type: css.TokenAtKeyword, Data: "@import"}) {
-		p.AcceptRun(css.TokenWhitespace, css.TokenCDO, css.TokenCDC, css.TokenComment)
+		acceptWhitespaceComments(p)
 
 		if p.Accept(css.TokenString, css.TokenURL) {
-			p.AcceptRun(css.TokenWhitespace, css.TokenCDO, css.TokenCDC, css.TokenComment)
+			acceptWhitespaceComments(p)
 
 			if p.AcceptToken(parser.Token{Type: css.TokenFunction, Data: "layer("}) {
 				if !p.Accept(css.TokenIdent) {
@@ -109,7 +115,7 @@ func parseImports(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 					return rest(p)
 				}
 
-				p.AcceptRun(css.TokenWhitespace, css.TokenCDO, css.TokenCDC, css.TokenComment)
+				acceptWhitespaceComments(p)
 			}
 
 			if p.AcceptToken(parser.Token{Type: css.TokenFunction, Data: "supports("}) {
@@ -135,7 +141,7 @@ func parseImports(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 					}
 				}
 
-				p.AcceptRun(css.TokenWhitespace, css.TokenCDO, css.TokenCDC, css.TokenComment)
+				acceptWhitespaceComments(p)
 			}
 
 			if p.ExceptRun(css.TokenSemiColon) == css.TokenSemiColon {
@@ -145,6 +151,10 @@ func parseImports(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 	}
 
 	return rest(p)
+}
+
+func acceptWhitespaceComments(p *parser.Parser) parser.TokenType {
+	return p.AcceptRun(css.TokenWhitespace, css.TokenCDO, css.TokenCDC, css.TokenComment)
 }
 
 func rest(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
