@@ -13,13 +13,13 @@ func TestCSSParser(t *testing.T) {
 		Input  string
 		Output []parser.Phrase
 	}{
-		{
+		{ // 1
 			Input: "",
 			Output: []parser.Phrase{
 				{Type: parser.PhraseDone, Data: nil},
 			},
 		},
-		{
+		{ // 2
 			Input: " \n\t",
 			Output: []parser.Phrase{
 				{Type: phraseWhitespace, Data: []parser.Token{
@@ -28,7 +28,7 @@ func TestCSSParser(t *testing.T) {
 				{Type: parser.PhraseDone, Data: nil},
 			},
 		},
-		{
+		{ // 3
 			Input: " @import url(some/url); rest",
 			Output: []parser.Phrase{
 				{Type: phraseWhitespace, Data: []parser.Token{
@@ -49,7 +49,7 @@ func TestCSSParser(t *testing.T) {
 				{Type: parser.PhraseDone, Data: nil},
 			},
 		},
-		{
+		{ // 4
 			Input: "@import url(some/url);\n@import 'url' layer(a) ; rest",
 			Output: []parser.Phrase{
 				{Type: phraseImport, Data: []parser.Token{
@@ -81,7 +81,7 @@ func TestCSSParser(t *testing.T) {
 				{Type: parser.PhraseDone, Data: nil},
 			},
 		},
-		{
+		{ // 5
 			Input: "@import 'url' layer(a.b) supports(a b() c);",
 			Output: []parser.Phrase{
 				{Type: phraseImport, Data: []parser.Token{
@@ -108,7 +108,7 @@ func TestCSSParser(t *testing.T) {
 				{Type: parser.PhraseDone, Data: nil},
 			},
 		},
-		{
+		{ // 6
 			Input: "@import 'url' layer supports(a);",
 			Output: []parser.Phrase{
 				{Type: phraseImport, Data: []parser.Token{
@@ -126,7 +126,7 @@ func TestCSSParser(t *testing.T) {
 				{Type: parser.PhraseDone, Data: nil},
 			},
 		},
-		{
+		{ // 7
 			Input: "@import 'url' supports(a) screen and (orientation: landscape);",
 			Output: []parser.Phrase{
 				{Type: phraseImport, Data: []parser.Token{
