@@ -1,0 +1,184 @@
+package main
+
+import (
+	"strings"
+	"testing"
+
+	"vimagination.zapto.org/css"
+	"vimagination.zapto.org/parser"
+)
+
+func TestCSSParser(t *testing.T) {
+	for n, test := range [...]struct {
+		Input  string
+		Output []parser.Phrase
+	}{
+		{
+			Input: "",
+			Output: []parser.Phrase{
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
+		{
+			Input: " \n\t",
+			Output: []parser.Phrase{
+				{Type: phraseWhitespace, Data: []parser.Token{
+					{Type: css.TokenWhitespace, Data: " \n\t"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
+		{
+			Input: " @import url(some/url); rest",
+			Output: []parser.Phrase{
+				{Type: phraseWhitespace, Data: []parser.Token{
+					{Type: css.TokenWhitespace, Data: " "},
+				}},
+				{Type: phraseImport, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "import"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenURL, Data: "url(some/url)"},
+					{Type: css.TokenSemiColon, Data: ";"},
+				}},
+				{Type: phraseWhitespace, Data: []parser.Token{
+					{Type: css.TokenWhitespace, Data: " "},
+				}},
+				{Type: phraseRemaining, Data: []parser.Token{
+					{Type: css.TokenIdent, Data: "rest"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
+		{
+			Input: "@import url(some/url);\n@import 'url' layer(a) ; rest",
+			Output: []parser.Phrase{
+				{Type: phraseImport, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "import"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenURL, Data: "url(some/url)"},
+					{Type: css.TokenSemiColon, Data: ";"},
+				}},
+				{Type: phraseWhitespace, Data: []parser.Token{
+					{Type: css.TokenWhitespace, Data: "\n"},
+				}},
+				{Type: phraseImport, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@import"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenString, Data: "'url'"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenFunction, Data: "layer("},
+					{Type: css.TokenIdent, Data: "a"},
+					{Type: css.TokenCloseParen, Data: ")"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenSemiColon, Data: ";"},
+				}},
+				{Type: phraseWhitespace, Data: []parser.Token{
+					{Type: css.TokenWhitespace, Data: " "},
+				}},
+				{Type: phraseRemaining, Data: []parser.Token{
+					{Type: css.TokenIdent, Data: "rest"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
+		{
+			Input: "@import 'url' layer(a.b) supports(a b() c);",
+			Output: []parser.Phrase{
+				{Type: phraseImport, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@import"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenString, Data: "'url'"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenFunction, Data: "layer("},
+					{Type: css.TokenIdent, Data: "a"},
+					{Type: css.TokenDelim, Data: "."},
+					{Type: css.TokenIdent, Data: "b"},
+					{Type: css.TokenCloseParen, Data: ")"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenFunction, Data: "supports("},
+					{Type: css.TokenIdent, Data: "a"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenFunction, Data: "b("},
+					{Type: css.TokenCloseParen, Data: ")"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenIdent, Data: "c"},
+					{Type: css.TokenCloseParen, Data: ")"},
+					{Type: css.TokenSemiColon, Data: ";"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
+		{
+			Input: "@import 'url' layer supports(a);",
+			Output: []parser.Phrase{
+				{Type: phraseImport, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@import"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenString, Data: "'url'"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenIdent, Data: "layer"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenFunction, Data: "supports("},
+					{Type: css.TokenIdent, Data: "a"},
+					{Type: css.TokenCloseParen, Data: ")"},
+					{Type: css.TokenSemiColon, Data: ";"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
+		{
+			Input: "@import 'url' supports(a) screen and (orientation: landscape);",
+			Output: []parser.Phrase{
+				{Type: phraseImport, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@import"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenString, Data: "'url'"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenFunction, Data: "supports("},
+					{Type: css.TokenIdent, Data: "a"},
+					{Type: css.TokenCloseParen, Data: ")"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenIdent, Data: "screen"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenIdent, Data: "and"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenOpenParen, Data: "("},
+					{Type: css.TokenIdent, Data: "orientation"},
+					{Type: css.TokenColon, Data: ":"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenIdent, Data: "landscape"},
+					{Type: css.TokenCloseParen, Data: ")"},
+					{Type: css.TokenSemiColon, Data: ";"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
+	} {
+		p := createCSSParser(strings.NewReader(test.Input))
+
+	Loop:
+		for m, ph := range test.Output {
+			if phr, err := p.GetPhrase(); phr.Type != ph.Type {
+				if phr.Type == parser.PhraseError {
+					t.Errorf("test %d.%d: unexpected error: %s", n+1, m+1, err)
+				} else {
+					t.Errorf("test %d.%d: Incorrect type, expecting %d, got %d", n+1, m+1, ph.Type, phr.Type)
+				}
+
+				break
+			} else {
+				for o, tk := range phr.Data {
+					if otk := ph.Data[o]; tk.Type != otk.Type {
+						if tk.Type == parser.TokenError {
+							t.Errorf("test %d.%d.%d: unexpected error: %s", n+1, m+1, o+1, tk.Data)
+						} else {
+							t.Errorf("test %d.%d.%d: Incorrect type, expecting %d, got %d", n+1, m+1, o+1, otk.Type, tk.Type)
+						}
+
+						break Loop
+					}
+				}
+			}
+		}
+	}
+}
