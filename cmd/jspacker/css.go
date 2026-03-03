@@ -145,6 +145,8 @@ func parseImports(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 			}
 
 			if p.ExceptRun(css.TokenSemiColon) == css.TokenSemiColon {
+				p.Next()
+
 				return p.Return(phraseImport, parseImports)
 			}
 		}
