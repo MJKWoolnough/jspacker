@@ -66,6 +66,8 @@ func TestCSSParser(t *testing.T) {
 					{Type: css.TokenWhitespace, Data: " "},
 					{Type: css.TokenString, Data: "'url'"},
 					{Type: css.TokenWhitespace, Data: " "},
+				}},
+				{Type: phraseImportLayer, Data: []parser.Token{
 					{Type: css.TokenFunction, Data: "layer("},
 					{Type: css.TokenIdent, Data: "a"},
 					{Type: css.TokenCloseParen, Data: ")"},
@@ -89,12 +91,16 @@ func TestCSSParser(t *testing.T) {
 					{Type: css.TokenWhitespace, Data: " "},
 					{Type: css.TokenString, Data: "'url'"},
 					{Type: css.TokenWhitespace, Data: " "},
+				}},
+				{Type: phraseImportLayer, Data: []parser.Token{
 					{Type: css.TokenFunction, Data: "layer("},
 					{Type: css.TokenIdent, Data: "a"},
 					{Type: css.TokenDelim, Data: "."},
 					{Type: css.TokenIdent, Data: "b"},
 					{Type: css.TokenCloseParen, Data: ")"},
 					{Type: css.TokenWhitespace, Data: " "},
+				}},
+				{Type: phraseImportSupports, Data: []parser.Token{
 					{Type: css.TokenFunction, Data: "supports("},
 					{Type: css.TokenIdent, Data: "a"},
 					{Type: css.TokenWhitespace, Data: " "},
@@ -116,8 +122,12 @@ func TestCSSParser(t *testing.T) {
 					{Type: css.TokenWhitespace, Data: " "},
 					{Type: css.TokenString, Data: "'url'"},
 					{Type: css.TokenWhitespace, Data: " "},
+				}},
+				{Type: phraseImportLayer, Data: []parser.Token{
 					{Type: css.TokenIdent, Data: "layer"},
 					{Type: css.TokenWhitespace, Data: " "},
+				}},
+				{Type: phraseImportSupports, Data: []parser.Token{
 					{Type: css.TokenFunction, Data: "supports("},
 					{Type: css.TokenIdent, Data: "a"},
 					{Type: css.TokenCloseParen, Data: ")"},
@@ -134,10 +144,14 @@ func TestCSSParser(t *testing.T) {
 					{Type: css.TokenWhitespace, Data: " "},
 					{Type: css.TokenString, Data: "'url'"},
 					{Type: css.TokenWhitespace, Data: " "},
+				}},
+				{Type: phraseImportSupports, Data: []parser.Token{
 					{Type: css.TokenFunction, Data: "supports("},
 					{Type: css.TokenIdent, Data: "a"},
 					{Type: css.TokenCloseParen, Data: ")"},
 					{Type: css.TokenWhitespace, Data: " "},
+				}},
+				{Type: phraseImportMedia, Data: []parser.Token{
 					{Type: css.TokenIdent, Data: "screen"},
 					{Type: css.TokenWhitespace, Data: " "},
 					{Type: css.TokenIdent, Data: "and"},

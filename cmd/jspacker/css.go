@@ -84,6 +84,9 @@ func writeTokens(w io.Writer, tks []parser.Token) error {
 const (
 	phraseWhitespace parser.PhraseType = iota
 	phraseImport
+	phraseImportLayer
+	phraseImportSupports
+	phraseImportMedia
 	phraseRemaining
 )
 
@@ -94,64 +97,105 @@ func parseImports(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 		return p.Return(phraseWhitespace, parseImports)
 	}
 
-	if p.AcceptToken(parser.Token{Type: css.TokenAtKeyword, Data: "@import"}) {
-		acceptWhitespaceComments(p)
+	if !p.AcceptToken(parser.Token{Type: css.TokenAtKeyword, Data: "@import"}) {
+		return rest(p)
+	}
 
-		if p.Accept(css.TokenString, css.TokenURL) {
-			acceptWhitespaceComments(p)
+	return parseImport(p)
+}
 
-			if p.AcceptToken(parser.Token{Type: css.TokenFunction, Data: "layer("}) {
-				if !p.Accept(css.TokenIdent) {
-					return rest(p)
-				}
+func parseImport(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
+	acceptWhitespaceComments(p)
 
-				for p.AcceptToken(parser.Token{Type: css.TokenDelim, Data: "."}) {
-					if !p.Accept(css.TokenIdent) {
-						return rest(p)
-					}
-				}
+	if !p.Accept(css.TokenString, css.TokenURL) {
+		return rest(p)
+	}
 
-				if !p.Accept(css.TokenCloseParen) {
-					return rest(p)
-				}
+	acceptWhitespaceComments(p)
 
-				acceptWhitespaceComments(p)
-			} else if p.AcceptToken(parser.Token{Type: css.TokenIdent, Data: "layer"}) {
-				acceptWhitespaceComments(p)
-			}
+	if p.AcceptToken(parser.Token{Type: css.TokenSemiColon, Data: ";"}) {
+		return p.Return(phraseImport, parseImports)
+	}
 
-			if p.AcceptToken(parser.Token{Type: css.TokenFunction, Data: "supports("}) {
-				depth := 1
+	return p.Return(phraseImport, parseLayerSupportOrMedia)
+}
 
-			Loop:
-				for {
-					switch p.ExceptRun(css.TokenCloseParen, css.TokenOpenParen, css.TokenFunction) {
-					case css.TokenCloseParen:
-						p.Next()
+func parseLayerSupportOrMedia(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
+	acceptWhitespaceComments(p)
 
-						depth--
+	if p.AcceptToken(parser.Token{Type: css.TokenFunction, Data: "layer("}) {
+		if !p.Accept(css.TokenIdent) {
+			return rest(p)
+		}
 
-						if depth == 0 {
-							break Loop
-						}
-					case css.TokenOpenParen, css.TokenFunction:
-						p.Next()
-
-						depth++
-					default:
-						return rest(p)
-					}
-				}
-
-				acceptWhitespaceComments(p)
-			}
-
-			if p.ExceptRun(css.TokenSemiColon) == css.TokenSemiColon {
-				p.Next()
-
-				return p.Return(phraseImport, parseImports)
+		for p.AcceptToken(parser.Token{Type: css.TokenDelim, Data: "."}) {
+			if !p.Accept(css.TokenIdent) {
+				return rest(p)
 			}
 		}
+
+		if !p.Accept(css.TokenCloseParen) {
+			return rest(p)
+		}
+
+	} else if !p.AcceptToken(parser.Token{Type: css.TokenIdent, Data: "layer"}) {
+		return parseSupportOrMedia(p)
+	}
+
+	acceptWhitespaceComments(p)
+
+	if p.AcceptToken(parser.Token{Type: css.TokenSemiColon, Data: ";"}) {
+		return p.Return(phraseImportLayer, parseImports)
+	}
+
+	return p.Return(phraseImportLayer, parseSupportOrMedia)
+}
+
+func parseSupportOrMedia(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
+	acceptWhitespaceComments(p)
+
+	if !p.AcceptToken(parser.Token{Type: css.TokenFunction, Data: "supports("}) {
+		return parseMedia(p)
+	}
+
+	depth := 1
+
+Loop:
+	for {
+		switch p.ExceptRun(css.TokenCloseParen, css.TokenOpenParen, css.TokenFunction) {
+		case css.TokenCloseParen:
+			p.Next()
+
+			depth--
+
+			if depth == 0 {
+				break Loop
+			}
+		case css.TokenOpenParen, css.TokenFunction:
+			p.Next()
+
+			depth++
+		default:
+			return rest(p)
+		}
+	}
+
+	acceptWhitespaceComments(p)
+
+	if p.AcceptToken(parser.Token{Type: css.TokenSemiColon, Data: ";"}) {
+		return p.Return(phraseImportSupports, parseImports)
+	}
+
+	return p.Return(phraseImportSupports, parseMedia)
+}
+
+func parseMedia(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
+	acceptWhitespaceComments(p)
+
+	if p.ExceptRun(css.TokenSemiColon) == css.TokenSemiColon {
+		p.Next()
+
+		return p.Return(phraseImportMedia, parseImports)
 	}
 
 	return rest(p)
