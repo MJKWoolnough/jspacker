@@ -28,37 +28,50 @@ func (c cssLoader) Open() (io.ReadCloser, error) {
 	return os.Open(string(c))
 }
 
+type cssImport struct {
+	imports, layer, supports, media []parser.Token
+}
+
 func combineCSS(loader CSSLoader, w io.Writer) error {
-	r, err := loader.Open()
+	_, _, err := processCSS(loader)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func processCSS(loader CSSLoader) ([]cssImport, []parser.Token, error) {
+	r, err := loader.Open()
+	if err != nil {
+		return nil, nil, err
 	}
 
 	defer r.Close()
 
 	p := createCSSParser(r)
 
+	var imports []cssImport
+
 	for {
 		ph, err := p.GetPhrase()
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 
 		switch ph.Type {
-		case phraseWhitespace:
-			if err := writeTokens(w, ph.Data); err != nil {
-				return err
-			}
 		case phraseImport:
-
+			imports = append(imports, cssImport{imports: ph.Data})
+		case phraseImportLayer:
+			imports[len(imports)-1].layer = ph.Data
+		case phraseImportSupports:
+			imports[len(imports)-1].supports = ph.Data
+		case phraseImportMedia:
+			imports[len(imports)-1].media = ph.Data
 		case phraseRemaining:
-			if err := writeTokens(w, ph.Data); err != nil {
-				return err
-			}
-
-			return nil
+			return imports, ph.Data, nil
 		case parser.PhraseError:
-			return p.Err
+			return nil, nil, p.Err
 		}
 	}
 }
