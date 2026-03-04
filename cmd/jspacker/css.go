@@ -28,7 +28,7 @@ func (c cssLoader) Open() (io.ReadCloser, error) {
 	return os.Open(string(c))
 }
 
-func combineCSS(loader cssLoader, w io.Writer) error {
+func combineCSS(loader CSSLoader, w io.Writer) error {
 	r, err := loader.Open()
 	if err != nil {
 		return err
