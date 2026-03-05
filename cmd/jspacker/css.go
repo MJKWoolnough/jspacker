@@ -22,7 +22,7 @@ func (c cssLoader) Resolve(path string) CSSLoader {
 		return cssLoader(path)
 	}
 
-	return cssLoader(filepath.Join(string(c), path))
+	return cssLoader(filepath.Join(filepath.Dir(string(c)), path))
 }
 
 func (c cssLoader) Open() (io.ReadCloser, error) {
