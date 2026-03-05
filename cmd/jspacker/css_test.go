@@ -196,3 +196,41 @@ func TestCSSParser(t *testing.T) {
 		}
 	}
 }
+
+func TestCSSLoader(t *testing.T) {
+	for n, test := range [...]struct {
+		Input  cssLoader
+		Path   string
+		Output cssLoader
+	}{
+		{
+			Input:  "/a.css",
+			Path:   "/b.css",
+			Output: "/b.css",
+		},
+		{
+			Input:  "/a.css",
+			Path:   "b.css",
+			Output: "/b.css",
+		},
+		{
+			Input:  "/a/b.css",
+			Path:   "c.css",
+			Output: "/a/c.css",
+		},
+		{
+			Input:  "/a/b.css",
+			Path:   "../c.css",
+			Output: "/c.css",
+		},
+		{
+			Input:  "/a/b.css",
+			Path:   "/c.css",
+			Output: "/c.css",
+		},
+	} {
+		if output := test.Input.Resolve(test.Path).(cssLoader); output != test.Output {
+			t.Errorf("%d: expecting %q, got %q", n+1, test.Output, output)
+		}
+	}
+}
