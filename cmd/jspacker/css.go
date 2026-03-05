@@ -45,37 +45,29 @@ func combineCSS(loader CSSLoader, w *bytes.Buffer) error {
 			return err
 		}
 
-		depth := 0
+		var sections cssSection
 
 		if imp.layer != nil {
-			depth++
-
 			if imp.layer[0].Type == css.TokenIdent {
-				w.WriteString("@layer{")
+				sections.Write(w, "@layer", false, nil)
 			} else {
-				writeCSSSection(w, "@layer", false, imp.layer[1:len(imp.layer)-1])
+				sections.Write(w, "@layer", false, imp.layer[1:len(imp.layer)-1])
 			}
 		}
 
 		if imp.supports != nil {
-			depth++
-
-			writeCSSSection(w, "@supports", true, imp.supports[1:len(imp.layer)-1])
+			sections.Write(w, "@supports", true, imp.supports[1:len(imp.layer)-1])
 		}
 
 		if imp.media != nil {
-			depth++
-
-			writeCSSSection(w, "@media", true, imp.media)
+			sections.Write(w, "@media", true, imp.media)
 		}
 
 		if err := combineCSS(loader.Resolve(url), w); err != nil {
 			return err
 		}
 
-		for range depth {
-			w.WriteString("}")
-		}
+		sections.Close(w)
 	}
 
 	for _, tk := range rest {
@@ -85,7 +77,11 @@ func combineCSS(loader CSSLoader, w *bytes.Buffer) error {
 	return nil
 }
 
-func writeCSSSection(w *bytes.Buffer, at string, parens bool, tokens []parser.Token) {
+type cssSection int
+
+func (c *cssSection) Write(w *bytes.Buffer, at string, parens bool, tokens []parser.Token) {
+	(*c)++
+
 	w.WriteString(at)
 
 	if parens {
@@ -105,6 +101,12 @@ func writeCSSSection(w *bytes.Buffer, at string, parens bool, tokens []parser.To
 	}
 
 	w.WriteString("{")
+}
+
+func (c *cssSection) Close(w *bytes.Buffer) {
+	for range *c {
+		w.WriteString("}")
+	}
 }
 
 func getCSSPath(imp []parser.Token) (string, error) {
