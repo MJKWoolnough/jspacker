@@ -165,16 +165,6 @@ func createCSSParser(r io.Reader) *parser.Parser {
 	return &p
 }
 
-func writeTokens(w io.Writer, tks []parser.Token) error {
-	for _, tk := range tks {
-		if _, err := io.WriteString(w, tk.Data); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 const (
 	phraseWhitespace parser.PhraseType = iota
 	phraseImport
