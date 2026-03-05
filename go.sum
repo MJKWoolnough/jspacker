@@ -1,5 +1,7 @@
 vimagination.zapto.org/css v0.0.0-20260302202258-95a957bd4735 h1:loipzVDyEpapNhmA/zvXf7T/+8X3N3mp1ZTUJR199YQ=
 vimagination.zapto.org/css v0.0.0-20260302202258-95a957bd4735/go.mod h1:v04F/qYtxtHrW/gC8NsnKOuyuDqXLVrmGJ9QsfoN/eM=
+vimagination.zapto.org/css v0.0.0-20260305195223-fee0088c0334 h1:tm7nCd+Op0H4l70JNBg1nUV17pF8v16jHaHcw2Egh0s=
+vimagination.zapto.org/css v0.0.0-20260305195223-fee0088c0334/go.mod h1:v04F/qYtxtHrW/gC8NsnKOuyuDqXLVrmGJ9QsfoN/eM=
 vimagination.zapto.org/javascript v1.6.10 h1:iDJwL9FnbgDhyB3OFSUGIxrc4KhJeXNEQ7RgFVzanDI=
 vimagination.zapto.org/javascript v1.6.10/go.mod h1:VHox5R23pekFQihRLxhfKh3lvY9TbGhG5KhPtMnM2kw=
 vimagination.zapto.org/parser v1.2.3 h1:OxtKZw0slZkt8c9ixfUAAWd6t30UwZerxPJJSyG34z0=
