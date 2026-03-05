@@ -53,38 +53,20 @@ func combineCSS(loader CSSLoader, w *bytes.Buffer) error {
 			if imp.layer[0].Type == css.TokenIdent {
 				w.WriteString("@layer{")
 			} else {
-				w.WriteString("@layer ")
-
-				for _, tk := range imp.layer[1 : len(imp.layer)-1] {
-					w.WriteString(tk.Data)
-				}
-
-				w.WriteString("{")
+				writeCSSSection(w, "@layer", false, imp.layer[1:len(imp.layer)-1])
 			}
 		}
 
 		if imp.supports != nil {
 			depth++
 
-			w.WriteString("@supports(")
-
-			for _, tk := range imp.supports[1 : len(imp.supports)-1] {
-				w.WriteString(tk.Data)
-			}
-
-			w.WriteString("){")
+			writeCSSSection(w, "@supports", true, imp.supports[1:len(imp.layer)-1])
 		}
 
 		if imp.media != nil {
 			depth++
 
-			w.WriteString("@supports(")
-
-			for _, tk := range imp.media {
-				w.WriteString(tk.Data)
-			}
-
-			w.WriteString("){")
+			writeCSSSection(w, "@media", true, imp.media)
 		}
 
 		if err := combineCSS(loader.Resolve(url), w); err != nil {
@@ -101,6 +83,28 @@ func combineCSS(loader CSSLoader, w *bytes.Buffer) error {
 	}
 
 	return nil
+}
+
+func writeCSSSection(w *bytes.Buffer, at string, parens bool, tokens []parser.Token) {
+	w.WriteString(at)
+
+	if parens {
+		w.WriteString("(")
+	}
+
+	for _, tk := range tokens {
+		if tk.Type == css.TokenSemiColon {
+			continue
+		}
+
+		w.WriteString(tk.Data)
+	}
+
+	if parens {
+		w.WriteString(")")
+	}
+
+	w.WriteString("{")
 }
 
 func getCSSPath(imp []parser.Token) (string, error) {
