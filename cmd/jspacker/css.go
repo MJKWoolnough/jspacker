@@ -33,12 +33,108 @@ type cssImport struct {
 }
 
 func combineCSS(loader CSSLoader, w io.Writer) error {
-	_, _, err := processCSS(loader)
+	imports, rest, err := processCSS(loader)
 	if err != nil {
 		return err
 	}
 
+	for _, imp := range imports {
+		url, err := getCSSPath(imp.imports)
+		if err != nil {
+			return err
+		}
+
+		depth := 0
+
+		if imp.layer != nil {
+			depth++
+
+			if imp.layer[0].Type == css.TokenIdent {
+				if _, err := io.WriteString(w, "@layer{"); err != nil {
+					return err
+				}
+			} else {
+				if _, err := io.WriteString(w, "@layer "); err != nil {
+					return err
+				}
+
+				for _, tk := range imp.layer[1 : len(imp.layer)-1] {
+					if _, err := io.WriteString(w, tk.Data); err != nil {
+						return err
+					}
+				}
+
+				if _, err := io.WriteString(w, "{"); err != nil {
+					return err
+				}
+			}
+		}
+
+		if imp.supports != nil {
+			depth++
+
+			if _, err := io.WriteString(w, "@supports("); err != nil {
+				return err
+			}
+
+			for _, tk := range imp.supports[1 : len(imp.supports)-1] {
+				if _, err := io.WriteString(w, tk.Data); err != nil {
+					return err
+				}
+			}
+
+			if _, err := io.WriteString(w, "){"); err != nil {
+				return err
+			}
+		}
+
+		if imp.media != nil {
+			depth++
+
+			if _, err := io.WriteString(w, "@supports("); err != nil {
+				return err
+			}
+
+			for _, tk := range imp.media {
+				if _, err := io.WriteString(w, tk.Data); err != nil {
+					return err
+				}
+			}
+
+			if _, err := io.WriteString(w, "){"); err != nil {
+				return err
+			}
+		}
+
+		if err := combineCSS(loader.Resolve(url), w); err != nil {
+			return err
+		}
+
+		for range depth {
+			io.WriteString(w, "}")
+		}
+	}
+
+	for _, tk := range rest {
+		if _, err := io.WriteString(w, tk.Data); err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+func getCSSPath(imp []parser.Token) (string, error) {
+	for _, i := range imp {
+		switch i.Type {
+		case css.TokenURL:
+			return css.UnURL(i.Data)
+		case css.TokenString:
+			return css.Unquote(i.Data)
+		}
+	}
+
+	return "", nil
 }
 
 func processCSS(loader CSSLoader) ([]cssImport, []parser.Token, error) {
