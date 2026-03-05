@@ -203,27 +203,27 @@ func TestCSSLoader(t *testing.T) {
 		Path   string
 		Output cssLoader
 	}{
-		{
+		{ // 1
 			Input:  "/a.css",
 			Path:   "/b.css",
 			Output: "/b.css",
 		},
-		{
+		{ // 2
 			Input:  "/a.css",
 			Path:   "b.css",
 			Output: "/b.css",
 		},
-		{
+		{ // 3
 			Input:  "/a/b.css",
 			Path:   "c.css",
 			Output: "/a/c.css",
 		},
-		{
+		{ // 4
 			Input:  "/a/b.css",
 			Path:   "../c.css",
 			Output: "/c.css",
 		},
-		{
+		{ // 5
 			Input:  "/a/b.css",
 			Path:   "/c.css",
 			Output: "/c.css",
