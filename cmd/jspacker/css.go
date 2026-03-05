@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"io"
 	"os"
 	"path/filepath"
@@ -32,7 +33,7 @@ type cssImport struct {
 	imports, layer, supports, media []parser.Token
 }
 
-func combineCSS(loader CSSLoader, w io.Writer) error {
+func combineCSS(loader CSSLoader, w *bytes.Buffer) error {
 	imports, rest, err := processCSS(loader)
 	if err != nil {
 		return err
@@ -50,60 +51,40 @@ func combineCSS(loader CSSLoader, w io.Writer) error {
 			depth++
 
 			if imp.layer[0].Type == css.TokenIdent {
-				if _, err := io.WriteString(w, "@layer{"); err != nil {
-					return err
-				}
+				w.WriteString("@layer{")
 			} else {
-				if _, err := io.WriteString(w, "@layer "); err != nil {
-					return err
-				}
+				w.WriteString("@layer ")
 
 				for _, tk := range imp.layer[1 : len(imp.layer)-1] {
-					if _, err := io.WriteString(w, tk.Data); err != nil {
-						return err
-					}
+					w.WriteString(tk.Data)
 				}
 
-				if _, err := io.WriteString(w, "{"); err != nil {
-					return err
-				}
+				w.WriteString("{")
 			}
 		}
 
 		if imp.supports != nil {
 			depth++
 
-			if _, err := io.WriteString(w, "@supports("); err != nil {
-				return err
-			}
+			w.WriteString("@supports(")
 
 			for _, tk := range imp.supports[1 : len(imp.supports)-1] {
-				if _, err := io.WriteString(w, tk.Data); err != nil {
-					return err
-				}
+				w.WriteString(tk.Data)
 			}
 
-			if _, err := io.WriteString(w, "){"); err != nil {
-				return err
-			}
+			w.WriteString("){")
 		}
 
 		if imp.media != nil {
 			depth++
 
-			if _, err := io.WriteString(w, "@supports("); err != nil {
-				return err
-			}
+			w.WriteString("@supports(")
 
 			for _, tk := range imp.media {
-				if _, err := io.WriteString(w, tk.Data); err != nil {
-					return err
-				}
+				w.WriteString(tk.Data)
 			}
 
-			if _, err := io.WriteString(w, "){"); err != nil {
-				return err
-			}
+			w.WriteString("){")
 		}
 
 		if err := combineCSS(loader.Resolve(url), w); err != nil {
@@ -111,14 +92,12 @@ func combineCSS(loader CSSLoader, w io.Writer) error {
 		}
 
 		for range depth {
-			io.WriteString(w, "}")
+			w.WriteString("}")
 		}
 	}
 
 	for _, tk := range rest {
-		if _, err := io.WriteString(w, tk.Data); err != nil {
-			return err
-		}
+		w.WriteString(tk.Data)
 	}
 
 	return nil
