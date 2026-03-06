@@ -264,6 +264,10 @@ func TestCombineCSS(t *testing.T) {
 			sheets: map[string]string{"/a.css": "abc"},
 			output: "abc",
 		},
+		{
+			sheets: map[string]string{"/a.css": `@import "b.css";abc`, "/b.css": "def"},
+			output: "def\nabc",
+		},
 	} {
 		var buf bytes.Buffer
 
