@@ -272,6 +272,14 @@ func TestCombineCSS(t *testing.T) {
 			sheets: map[string]string{"/a.css": `@import "b.css" screen;abc`, "/b.css": "def"},
 			output: "@media screen{def}abc",
 		},
+		{
+			sheets: map[string]string{"/a.css": `@import "b.css" layer screen;abc`, "/b.css": "def"},
+			output: "@layer{@media screen{def}}abc",
+		},
+		{
+			sheets: map[string]string{"/a.css": `@import "b.css" layer;abc`, "/b.css": "def"},
+			output: "@layer{def}abc",
+		},
 	} {
 		var buf bytes.Buffer
 
