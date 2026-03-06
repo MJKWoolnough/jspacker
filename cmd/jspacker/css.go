@@ -55,7 +55,7 @@ func combineCSS(loader CSSLoader, w *bytes.Buffer) error {
 			if imp.layer[0].Type == css.TokenIdent {
 				sections.Write(w, "@layer", false, nil)
 			} else {
-				sections.Write(w, "@layer", false, imp.layer[1:len(imp.layer)-1])
+				sections.Write(w, "@layer ", false, imp.layer[1:len(imp.layer)-1])
 			}
 		}
 
@@ -64,7 +64,7 @@ func combineCSS(loader CSSLoader, w *bytes.Buffer) error {
 		}
 
 		if imp.media != nil {
-			sections.Write(w, "@media", true, imp.media)
+			sections.Write(w, "@media ", false, imp.media)
 		}
 
 		if err := combineCSS(loader.Resolve(url), w); err != nil {
