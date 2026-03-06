@@ -74,10 +74,12 @@ func combineCSS(loader CSSLoader, w *bytes.Buffer) error {
 		sections.Close(w)
 	}
 
-	switch lastByte(w.Bytes()) {
-	case 0, '}', '{', '\n', ';':
-	default:
-		w.WriteByte('\n')
+	if len(rest) > 0 {
+		switch lastByte(w.Bytes()) {
+		case 0, '}', '{', '\n', ';':
+		default:
+			w.WriteByte('\n')
+		}
 	}
 
 	for _, tk := range rest {
