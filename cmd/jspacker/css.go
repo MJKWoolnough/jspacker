@@ -74,11 +74,25 @@ func combineCSS(loader CSSLoader, w *bytes.Buffer) error {
 		sections.Close(w)
 	}
 
+	switch lastByte(w.Bytes()) {
+	case 0, '}', '{', '\n', ';':
+	default:
+		w.WriteByte('\n')
+	}
+
 	for _, tk := range rest {
 		w.WriteString(tk.Data)
 	}
 
 	return nil
+}
+
+func lastByte(bytes []byte) byte {
+	if len(bytes) == 0 {
+		return 0
+	}
+
+	return bytes[len(bytes)-1]
 }
 
 type cssSection int
