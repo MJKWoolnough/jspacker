@@ -53,18 +53,18 @@ func combineCSS(loader CSSLoader, w *bytes.Buffer) error {
 
 		if imp.layer != nil {
 			if imp.layer[0].Type == css.TokenIdent {
-				sections.Write(w, "@layer", false, nil)
+				sections.Write(w, "@layer", nil)
 			} else {
-				sections.Write(w, "@layer ", false, imp.layer[1:len(imp.layer)-1])
+				sections.Write(w, "@layer ", imp.layer[1:len(imp.layer)-2])
 			}
 		}
 
 		if imp.supports != nil {
-			sections.Write(w, "@supports", true, imp.supports[1:len(imp.layer)-1])
+			sections.Write(w, "@supports(", imp.supports[1:len(imp.supports)-1])
 		}
 
 		if imp.media != nil {
-			sections.Write(w, "@media ", false, imp.media)
+			sections.Write(w, "@media ", imp.media)
 		}
 
 		if err := combineCSS(loader.Resolve(url), w); err != nil {
@@ -97,14 +97,10 @@ func lastByte(bytes []byte) byte {
 
 type cssSection int
 
-func (c *cssSection) Write(w *bytes.Buffer, at string, parens bool, tokens []parser.Token) {
+func (c *cssSection) Write(w *bytes.Buffer, at string, tokens []parser.Token) {
 	(*c)++
 
 	w.WriteString(at)
-
-	if parens {
-		w.WriteString("(")
-	}
 
 	for _, tk := range tokens {
 		if tk.Type == css.TokenSemiColon {
@@ -112,10 +108,6 @@ func (c *cssSection) Write(w *bytes.Buffer, at string, parens bool, tokens []par
 		}
 
 		w.WriteString(tk.Data)
-	}
-
-	if parens {
-		w.WriteString(")")
 	}
 
 	w.WriteString("{")
