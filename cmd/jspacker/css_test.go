@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"errors"
+	"io"
 	"strings"
 	"testing"
 
@@ -231,6 +234,43 @@ func TestCSSLoader(t *testing.T) {
 	} {
 		if output := test.Input.Resolve(test.Path).(cssLoader); output != test.Output {
 			t.Errorf("%d: expecting %q, got %q", n+1, test.Output, output)
+		}
+	}
+}
+
+type memCSSLoader struct {
+	path   string
+	sheets map[string]string
+}
+
+func (m *memCSSLoader) Resolve(path string) CSSLoader {
+	return &memCSSLoader{
+		path:   resolvePath(m.path, path),
+		sheets: m.sheets,
+	}
+}
+
+func (m *memCSSLoader) Open() (io.ReadCloser, error) {
+	return io.NopCloser(strings.NewReader(m.sheets[m.path])), nil
+}
+
+func TestCombineCSS(t *testing.T) {
+	for n, test := range [...]struct {
+		sheets map[string]string
+		output string
+		err    error
+	}{
+		{
+			sheets: map[string]string{"/a.css": "abc"},
+			output: "abc",
+		},
+	} {
+		var buf bytes.Buffer
+
+		if err := combineCSS(&memCSSLoader{"/a.css", test.sheets}, &buf); !errors.Is(err, test.err) {
+			t.Errorf("test %d: expecting error %v, got %v", n+1, test.err, err)
+		} else if out := buf.String(); out != test.output {
+			t.Errorf("test %d: expecting output %q, got %q", n+1, test.output, out)
 		}
 	}
 }
