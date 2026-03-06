@@ -18,11 +18,15 @@ type CSSLoader interface {
 type cssLoader string
 
 func (c cssLoader) Resolve(path string) CSSLoader {
+	return cssLoader(resolvePath(string(c), path))
+}
+
+func resolvePath(orig, path string) string {
 	if filepath.IsAbs(path) {
-		return cssLoader(path)
+		return path
 	}
 
-	return cssLoader(filepath.Join(filepath.Dir(string(c)), path))
+	return filepath.Join(filepath.Dir(orig), path)
 }
 
 func (c cssLoader) Open() (io.ReadCloser, error) {
