@@ -280,6 +280,30 @@ func TestCombineCSS(t *testing.T) {
 			sheets: map[string]string{"/a.css": `@import "b.css" layer;abc`, "/b.css": "def"},
 			output: "@layer{def}abc",
 		},
+		{
+			sheets: map[string]string{"/a.css": `@import "b.css" layer(a) other;abc`, "/b.css": "def"},
+			output: "@layer a{@media other{def}}abc",
+		},
+		{
+			sheets: map[string]string{"/a.css": `@import "b.css" layer(a);abc`, "/b.css": "def"},
+			output: "@layer a{def}abc",
+		},
+		{
+			sheets: map[string]string{"/a.css": `@import "b.css" supports(a) screen;abc`, "/b.css": "def"},
+			output: "@supports(a){@media screen{def}}abc",
+		},
+		{
+			sheets: map[string]string{"/a.css": `@import "b.css" supports(a);abc`, "/b.css": "def"},
+			output: "@supports(a){def}abc",
+		},
+		{
+			sheets: map[string]string{"/a.css": `@import "b.css" layer supports(a);abc`, "/b.css": "def"},
+			output: "@layer{@supports(a){def}}abc",
+		},
+		{
+			sheets: map[string]string{"/a.css": `@import "b.css" layer(a.b) supports(a) media;abc`, "/b.css": "def"},
+			output: "@layer a.b{@supports(a){@media media{def}}}abc",
+		},
 	} {
 		var buf bytes.Buffer
 
