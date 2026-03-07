@@ -492,6 +492,14 @@ func TestCombineCSS(t *testing.T) {
 			sheets: map[string]string{"/a.css": "@charset \"utf-8\";@import url(b.css);abc", "/b.css": "def"},
 			output: "@charset \"utf-8\";def\nabc",
 		},
+		{
+			sheets: map[string]string{"/a.css": `@layer a, b;@import "b.css";abc`, "/b.css": "def"},
+			output: "@layer a, b;def\nabc",
+		},
+		{
+			sheets: map[string]string{"/a.css": `@charset "utf-8";@layer a {stuff}@import "b.css";abc`, "/b.css": "def"},
+			output: "@charset \"utf-8\";@layer a {stuff}def\nabc",
+		},
 	} {
 		var buf bytes.Buffer
 
