@@ -440,63 +440,63 @@ func TestCombineCSS(t *testing.T) {
 		output string
 		err    error
 	}{
-		{
+		{ // 1
 			sheets: map[string]string{"/a.css": "abc"},
 			output: "abc",
 		},
-		{
+		{ // 2
 			sheets: map[string]string{"/a.css": `@import "b.css";abc`, "/b.css": "def"},
 			output: "def\nabc",
 		},
-		{
+		{ // 3
 			sheets: map[string]string{"/a.css": `@import "b.css" screen;abc`, "/b.css": "def"},
 			output: "@media screen{def}abc",
 		},
-		{
+		{ // 4
 			sheets: map[string]string{"/a.css": `@import "b.css" layer screen;abc`, "/b.css": "def"},
 			output: "@layer{@media screen{def}}abc",
 		},
-		{
+		{ // 5
 			sheets: map[string]string{"/a.css": `@import "b.css" layer;abc`, "/b.css": "def"},
 			output: "@layer{def}abc",
 		},
-		{
+		{ // 6
 			sheets: map[string]string{"/a.css": `@import "b.css" layer(a) other;abc`, "/b.css": "def"},
 			output: "@layer a{@media other{def}}abc",
 		},
-		{
+		{ // 7
 			sheets: map[string]string{"/a.css": `@import "b.css" layer(a);abc`, "/b.css": "def"},
 			output: "@layer a{def}abc",
 		},
-		{
+		{ // 8
 			sheets: map[string]string{"/a.css": `@import "b.css" supports(a) screen;abc`, "/b.css": "def"},
 			output: "@supports(a){@media screen{def}}abc",
 		},
-		{
+		{ // 9
 			sheets: map[string]string{"/a.css": `@import "b.css" supports(a);abc`, "/b.css": "def"},
 			output: "@supports(a){def}abc",
 		},
-		{
+		{ // 10
 			sheets: map[string]string{"/a.css": `@import "b.css" layer supports(a);abc`, "/b.css": "def"},
 			output: "@layer{@supports(a){def}}abc",
 		},
-		{
+		{ // 11
 			sheets: map[string]string{"/a.css": `@import "b.css" layer(a.b) supports(a) media;abc`, "/b.css": "def"},
 			output: "@layer a.b{@supports(a){@media media{def}}}abc",
 		},
-		{
+		{ // 12
 			sheets: map[string]string{"/a.css": "@charset \"utf-8\";abc"},
 			output: "@charset \"utf-8\";abc",
 		},
-		{
+		{ // 13
 			sheets: map[string]string{"/a.css": "@charset \"utf-8\";@import url(b.css);abc", "/b.css": "def"},
 			output: "@charset \"utf-8\";def\nabc",
 		},
-		{
+		{ // 14
 			sheets: map[string]string{"/a.css": `@layer a, b;@import "b.css";abc`, "/b.css": "def"},
 			output: "@layer a, b;def\nabc",
 		},
-		{
+		{ // 15
 			sheets: map[string]string{"/a.css": `@charset "utf-8";@layer a {stuff}@import "b.css";abc`, "/b.css": "def"},
 			output: "@charset \"utf-8\";@layer a {stuff}def\nabc",
 		},
