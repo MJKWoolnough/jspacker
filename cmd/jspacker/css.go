@@ -162,7 +162,7 @@ func processCSS(loader CSSLoader) ([]cssImport, []parser.Token, error) {
 		}
 
 		switch ph.Type {
-		case phraseCharset:
+		case phraseCharset, phraseLayer:
 			imports = append(imports, cssImport{layer: ph.Data})
 		case phraseImport:
 			imports = append(imports, cssImport{imports: ph.Data})
