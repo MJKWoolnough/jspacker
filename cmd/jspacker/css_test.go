@@ -380,6 +380,14 @@ func TestCombineCSS(t *testing.T) {
 			sheets: map[string]string{"/a.css": `@import "b.css" layer(a.b) supports(a) media;abc`, "/b.css": "def"},
 			output: "@layer a.b{@supports(a){@media media{def}}}abc",
 		},
+		{
+			sheets: map[string]string{"/a.css": "@charset \"utf-8\";abc"},
+			output: "@charset \"utf-8\";abc",
+		},
+		{
+			sheets: map[string]string{"/a.css": "@charset \"utf-8\";@import url(b.css);abc", "/b.css": "def"},
+			output: "@charset \"utf-8\";def\nabc",
+		},
 	} {
 		var buf bytes.Buffer
 
