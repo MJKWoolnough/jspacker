@@ -195,6 +195,7 @@ const (
 	phraseImportSupports
 	phraseImportMedia
 	phraseCharset
+	phraseLayer
 	phraseRemaining
 )
 
@@ -229,11 +230,70 @@ func parseImports(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 		return p.Return(phraseWhitespace, parseImports)
 	}
 
-	if !p.AcceptToken(parser.Token{Type: css.TokenAtKeyword, Data: "@import"}) {
+	if p.AcceptToken(parser.Token{Type: css.TokenAtKeyword, Data: "@layer"}) {
+		return parseLayer(p)
+	} else if !p.AcceptToken(parser.Token{Type: css.TokenAtKeyword, Data: "@import"}) {
 		return rest(p)
 	}
 
 	return parseImport(p)
+}
+
+func parseLayer(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
+	p.Accept(css.TokenWhitespace)
+
+	if p.Accept(css.TokenOpenBrace) {
+		return parseLayerBlock(p)
+	}
+
+	if !p.Accept(css.TokenIdent) {
+		return rest(p)
+	}
+
+	p.Accept(css.TokenWhitespace)
+
+	if p.Accept(css.TokenOpenBrace) {
+		return parseLayerBlock(p)
+	}
+
+	for p.Accept(css.TokenComma) {
+		p.Accept(css.TokenWhitespace)
+
+		if !p.Accept(css.TokenIdent) {
+			return rest(p)
+		}
+
+		p.Accept(css.TokenWhitespace)
+	}
+
+	if !p.Accept(css.TokenSemiColon) {
+		return rest(p)
+	}
+
+	return p.Return(phraseLayer, parseImports)
+}
+
+func parseLayerBlock(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
+	depth := 1
+
+	for {
+		switch p.ExceptRun(css.TokenCloseBrace, css.TokenOpenBrace) {
+		case css.TokenOpenBrace:
+			p.Next()
+
+			depth++
+		case css.TokenCloseBrace:
+			p.Next()
+
+			depth--
+
+			if depth == 0 {
+				return p.Return(phraseLayer, parseImports)
+			}
+		default:
+			return rest(p)
+		}
+	}
 }
 
 func parseImport(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
