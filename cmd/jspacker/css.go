@@ -45,6 +45,14 @@ func combineCSS(loader CSSLoader, w *bytes.Buffer) error {
 	}
 
 	for _, imp := range imports {
+		if imp.imports == nil {
+			for _, tk := range imp.layer {
+				w.WriteString(tk.Data)
+			}
+
+			continue
+		}
+
 		url, err := getCSSPath(imp.imports)
 		if err != nil {
 			return err
@@ -154,6 +162,8 @@ func processCSS(loader CSSLoader) ([]cssImport, []parser.Token, error) {
 		}
 
 		switch ph.Type {
+		case phraseCharset:
+			imports = append(imports, cssImport{layer: ph.Data})
 		case phraseImport:
 			imports = append(imports, cssImport{imports: ph.Data})
 		case phraseImportLayer:
