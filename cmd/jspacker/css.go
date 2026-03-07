@@ -46,9 +46,7 @@ func combineCSS(loader CSSLoader, w *bytes.Buffer) error {
 
 	for _, imp := range imports {
 		if imp.imports == nil {
-			for _, tk := range imp.layer {
-				w.WriteString(tk.Data)
-			}
+			printTokens(w, imp.layer)
 
 			continue
 		}
@@ -91,11 +89,15 @@ func combineCSS(loader CSSLoader, w *bytes.Buffer) error {
 		}
 	}
 
-	for _, tk := range rest {
-		w.WriteString(tk.Data)
-	}
+	printTokens(w, rest)
 
 	return nil
+}
+
+func printTokens(w *bytes.Buffer, tks []parser.Token) {
+	for _, tk := range tks {
+		w.WriteString(tk.Data)
+	}
 }
 
 func lastByte(bytes []byte) byte {
