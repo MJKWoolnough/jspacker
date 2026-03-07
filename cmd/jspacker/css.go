@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"vimagination.zapto.org/css"
 	"vimagination.zapto.org/parser"
@@ -172,7 +173,7 @@ func processCSS(loader CSSLoader) ([]cssImport, []parser.Token, error) {
 func createCSSParser(r io.Reader) *parser.Parser {
 	p := parser.New(*css.CreateTokeniser(parser.NewReaderTokeniser(r), false))
 
-	p.PhraserState(parseImports)
+	p.PhraserState(parseCSS)
 
 	return &p
 }
@@ -183,8 +184,33 @@ const (
 	phraseImportLayer
 	phraseImportSupports
 	phraseImportMedia
+	phraseCharset
 	phraseRemaining
 )
+
+func parseCSS(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
+	if p.AcceptToken(parser.Token{Type: css.TokenAtKeyword, Data: "@charset"}) {
+		return parseCharset(p)
+	}
+
+	return parseImports(p)
+}
+
+func parseCharset(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
+	p.Accept(css.TokenWhitespace)
+
+	if tk := p.Peek(); tk.Type != css.TokenString || !strings.HasPrefix(tk.Data, `"`) {
+		return rest(p)
+	}
+
+	p.Next()
+
+	if !p.Accept(css.TokenSemiColon) {
+		return rest(p)
+	}
+
+	return p.Return(phraseCharset, parseImports)
+}
 
 func parseImports(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 	if p.Accept(css.TokenWhitespace, css.TokenCDO, css.TokenCDC, css.TokenComment) {
