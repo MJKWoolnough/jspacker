@@ -246,6 +246,110 @@ func TestCSSParser(t *testing.T) {
 				{Type: parser.PhraseDone, Data: nil},
 			},
 		},
+		{ // 13
+			Input: "@layer a;",
+			Output: []parser.Phrase{
+				{Type: phraseLayer, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@layer"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenIdent, Data: "a"},
+					{Type: css.TokenSemiColon, Data: ";"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
+		{ // 14
+			Input: "@layer a,b, c ;",
+			Output: []parser.Phrase{
+				{Type: phraseLayer, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@layer"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenIdent, Data: "a"},
+					{Type: css.TokenComma, Data: ","},
+					{Type: css.TokenIdent, Data: "b"},
+					{Type: css.TokenComma, Data: ","},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenIdent, Data: "c"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenSemiColon, Data: ";"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
+		{ // 15
+			Input: "@layer{abc}",
+			Output: []parser.Phrase{
+				{Type: phraseLayer, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@layer"},
+					{Type: css.TokenOpenBrace, Data: "{"},
+					{Type: css.TokenIdent, Data: "abc"},
+					{Type: css.TokenCloseBrace, Data: "}"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
+		{ // 16
+			Input: "@layer a {{}};rest",
+			Output: []parser.Phrase{
+				{Type: phraseLayer, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@layer"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenIdent, Data: "a"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenOpenBrace, Data: "{"},
+					{Type: css.TokenOpenBrace, Data: "{"},
+					{Type: css.TokenCloseBrace, Data: "}"},
+					{Type: css.TokenCloseBrace, Data: "}"},
+				}},
+				{Type: phraseRemaining, Data: []parser.Token{
+					{Type: css.TokenSemiColon, Data: ";"},
+					{Type: css.TokenIdent, Data: "rest"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
+		{ // 17
+			Input: "@layer a, b {abc}",
+			Output: []parser.Phrase{
+				{Type: phraseRemaining, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@layer"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenIdent, Data: "a"},
+					{Type: css.TokenComma, Data: ","},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenIdent, Data: "b"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenOpenBrace, Data: "{"},
+					{Type: css.TokenIdent, Data: "abc"},
+					{Type: css.TokenCloseBrace, Data: "}"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
+		{ // 18
+			Input: "@layer a;@import url(some/url); rest",
+			Output: []parser.Phrase{
+				{Type: phraseLayer, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@layer"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenIdent, Data: "a"},
+					{Type: css.TokenSemiColon, Data: ";"},
+				}},
+				{Type: phraseImport, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "import"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenURL, Data: "url(some/url)"},
+					{Type: css.TokenSemiColon, Data: ";"},
+				}},
+				{Type: phraseWhitespace, Data: []parser.Token{
+					{Type: css.TokenWhitespace, Data: " "},
+				}},
+				{Type: phraseRemaining, Data: []parser.Token{
+					{Type: css.TokenIdent, Data: "rest"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
 	} {
 		p := createCSSParser(strings.NewReader(test.Input))
 
