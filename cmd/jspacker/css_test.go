@@ -170,6 +170,82 @@ func TestCSSParser(t *testing.T) {
 				{Type: parser.PhraseDone, Data: nil},
 			},
 		},
+		{ // 8
+			Input: `@charset "utf-8";`,
+			Output: []parser.Phrase{
+				{Type: phraseCharset, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@charset"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenString, Data: `"utf-8"`},
+					{Type: css.TokenSemiColon, Data: ";"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
+		{ // 9
+			Input: ` @charset "utf-8";`,
+			Output: []parser.Phrase{
+				{Type: phraseWhitespace, Data: []parser.Token{
+					{Type: css.TokenWhitespace, Data: " "},
+				}},
+				{Type: phraseRemaining, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@charset"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenString, Data: `"utf-8"`},
+					{Type: css.TokenSemiColon, Data: ";"},
+				}},
+			},
+		},
+		{ // 10
+			Input: `@charset 'utf-8';`,
+			Output: []parser.Phrase{
+				{Type: phraseRemaining, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@charset"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenString, Data: `'utf-8'`},
+					{Type: css.TokenSemiColon, Data: ";"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
+		{ // 11
+			Input: `@charset "utf-8"`,
+			Output: []parser.Phrase{
+				{Type: phraseRemaining, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@charset"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenString, Data: `"utf-8"`},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
+		{ // 12
+			Input: "@charset \"utf-8\";\n@import url(some/url); rest",
+			Output: []parser.Phrase{
+				{Type: phraseCharset, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@charset"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenString, Data: `"utf-8"`},
+					{Type: css.TokenSemiColon, Data: ";"},
+				}},
+				{Type: phraseWhitespace, Data: []parser.Token{
+					{Type: css.TokenWhitespace, Data: "\n"},
+				}},
+				{Type: phraseImport, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "import"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenURL, Data: "url(some/url)"},
+					{Type: css.TokenSemiColon, Data: ";"},
+				}},
+				{Type: phraseWhitespace, Data: []parser.Token{
+					{Type: css.TokenWhitespace, Data: " "},
+				}},
+				{Type: phraseRemaining, Data: []parser.Token{
+					{Type: css.TokenIdent, Data: "rest"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
 	} {
 		p := createCSSParser(strings.NewReader(test.Input))
 
