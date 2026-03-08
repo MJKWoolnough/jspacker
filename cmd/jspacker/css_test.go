@@ -409,7 +409,7 @@ func TestCSSParser(t *testing.T) {
 
 				break
 			} else if len(phr.Data) != len(ph.Data) {
-				t.Errorf("test %d.%d: incorrect data, expecting %q tokens, got %q", n+1, m+1, len(ph.Data), phr.Data)
+				t.Errorf("test %d.%d: incorrect data, expecting %d tokens, got %d", n+1, m+1, len(ph.Data), len(phr.Data))
 			} else {
 				for o, tk := range phr.Data {
 					if otk := ph.Data[o]; tk.Type != otk.Type {
