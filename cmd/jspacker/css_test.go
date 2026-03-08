@@ -377,6 +377,14 @@ func TestCSSParser(t *testing.T) {
 				{Type: parser.PhraseDone, Data: nil},
 			},
 		},
+		{ // 21
+			Input: "@layer {a",
+			Output: []parser.Phrase{
+				{Type: parser.PhraseError, Data: []parser.Token{
+					{Type: parser.TokenError, Data: "unexpected EOF"},
+				}},
+			},
+		},
 	} {
 		p := createCSSParser(strings.NewReader(test.Input))
 
