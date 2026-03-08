@@ -431,7 +431,7 @@ func TestCSSParser(t *testing.T) {
 				{Type: parser.PhraseDone, Data: nil},
 			},
 		},
-		{ // 24
+		{ // 25
 			Input: "@import url(a) layer(a;",
 			Output: []parser.Phrase{
 				{Type: phraseImport, Data: []parser.Token{
@@ -445,7 +445,7 @@ func TestCSSParser(t *testing.T) {
 				}},
 			},
 		},
-		{ // 25
+		{ // 26
 			Input: "@import url(a) supports(a;",
 			Output: []parser.Phrase{
 				{Type: phraseImport, Data: []parser.Token{
@@ -457,6 +457,25 @@ func TestCSSParser(t *testing.T) {
 				{Type: parser.PhraseError, Data: []parser.Token{
 					{Type: parser.TokenError, Data: "unexpected EOF"},
 				}},
+			},
+		},
+		{ // 27
+			Input: "@import url(a) a b\nc",
+			Output: []parser.Phrase{
+				{Type: phraseImport, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@import"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenURL, Data: "url(a)"},
+					{Type: css.TokenWhitespace, Data: " "},
+				}},
+				{Type: phraseRemaining, Data: []parser.Token{
+					{Type: css.TokenIdent, Data: "a"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenIdent, Data: "b"},
+					{Type: css.TokenWhitespace, Data: "\n"},
+					{Type: css.TokenIdent, Data: "c"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
 			},
 		},
 	} {
