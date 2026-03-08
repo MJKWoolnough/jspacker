@@ -38,7 +38,7 @@ func TestCSSParser(t *testing.T) {
 					{Type: css.TokenWhitespace, Data: " "},
 				}},
 				{Type: phraseImport, Data: []parser.Token{
-					{Type: css.TokenAtKeyword, Data: "import"},
+					{Type: css.TokenAtKeyword, Data: "@import"},
 					{Type: css.TokenWhitespace, Data: " "},
 					{Type: css.TokenURL, Data: "url(some/url)"},
 					{Type: css.TokenSemiColon, Data: ";"},
@@ -56,7 +56,7 @@ func TestCSSParser(t *testing.T) {
 			Input: "@import url(some/url);\n@import 'url' layer(a) ; rest",
 			Output: []parser.Phrase{
 				{Type: phraseImport, Data: []parser.Token{
-					{Type: css.TokenAtKeyword, Data: "import"},
+					{Type: css.TokenAtKeyword, Data: "@import"},
 					{Type: css.TokenWhitespace, Data: " "},
 					{Type: css.TokenURL, Data: "url(some/url)"},
 					{Type: css.TokenSemiColon, Data: ";"},
@@ -232,7 +232,7 @@ func TestCSSParser(t *testing.T) {
 					{Type: css.TokenWhitespace, Data: "\n"},
 				}},
 				{Type: phraseImport, Data: []parser.Token{
-					{Type: css.TokenAtKeyword, Data: "import"},
+					{Type: css.TokenAtKeyword, Data: "@import"},
 					{Type: css.TokenWhitespace, Data: " "},
 					{Type: css.TokenURL, Data: "url(some/url)"},
 					{Type: css.TokenSemiColon, Data: ";"},
@@ -336,7 +336,7 @@ func TestCSSParser(t *testing.T) {
 					{Type: css.TokenSemiColon, Data: ";"},
 				}},
 				{Type: phraseImport, Data: []parser.Token{
-					{Type: css.TokenAtKeyword, Data: "import"},
+					{Type: css.TokenAtKeyword, Data: "@import"},
 					{Type: css.TokenWhitespace, Data: " "},
 					{Type: css.TokenURL, Data: "url(some/url)"},
 					{Type: css.TokenSemiColon, Data: ";"},
@@ -363,16 +363,20 @@ func TestCSSParser(t *testing.T) {
 				}
 
 				break
+			} else if len(phr.Data) != len(ph.Data) {
+				t.Errorf("test %d.%d: incorrect data, expecting %q tokens, got %q", n+1, m+1, len(ph.Data), phr.Data)
 			} else {
 				for o, tk := range phr.Data {
 					if otk := ph.Data[o]; tk.Type != otk.Type {
 						if tk.Type == parser.TokenError {
 							t.Errorf("test %d.%d.%d: unexpected error: %s", n+1, m+1, o+1, tk.Data)
 						} else {
-							t.Errorf("test %d.%d.%d: Incorrect type, expecting %d, got %d", n+1, m+1, o+1, otk.Type, tk.Type)
+							t.Errorf("test %d.%d.%d: incorrect type, expecting %d, got %d", n+1, m+1, o+1, otk.Type, tk.Type)
 						}
 
 						break Loop
+					} else if otk.Data != tk.Data {
+						t.Errorf("test %d.%d.%d: incorrect data, expecting %q, got %q", n+1, m+1, o+1, otk.Data, tk.Data)
 					}
 				}
 			}
