@@ -445,6 +445,20 @@ func TestCSSParser(t *testing.T) {
 				}},
 			},
 		},
+		{ // 25
+			Input: "@import url(a) supports(a;",
+			Output: []parser.Phrase{
+				{Type: phraseImport, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@import"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenURL, Data: "url(a)"},
+					{Type: css.TokenWhitespace, Data: " "},
+				}},
+				{Type: parser.PhraseError, Data: []parser.Token{
+					{Type: parser.TokenError, Data: "unexpected EOF"},
+				}},
+			},
+		},
 	} {
 		p := createCSSParser(strings.NewReader(test.Input))
 
