@@ -395,6 +395,56 @@ func TestCSSParser(t *testing.T) {
 				{Type: parser.PhraseDone, Data: nil},
 			},
 		},
+		{ // 23
+			Input: "@import url(a) layer();",
+			Output: []parser.Phrase{
+				{Type: phraseImport, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@import"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenURL, Data: "url(a)"},
+					{Type: css.TokenWhitespace, Data: " "},
+				}},
+				{Type: phraseRemaining, Data: []parser.Token{
+					{Type: css.TokenFunction, Data: "layer("},
+					{Type: css.TokenCloseParen, Data: ")"},
+					{Type: css.TokenSemiColon, Data: ";"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
+		{ // 24
+			Input: "@import url(a) layer(a.);",
+			Output: []parser.Phrase{
+				{Type: phraseImport, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@import"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenURL, Data: "url(a)"},
+					{Type: css.TokenWhitespace, Data: " "},
+				}},
+				{Type: phraseRemaining, Data: []parser.Token{
+					{Type: css.TokenFunction, Data: "layer("},
+					{Type: css.TokenIdent, Data: "a"},
+					{Type: css.TokenDelim, Data: "."},
+					{Type: css.TokenCloseParen, Data: ")"},
+					{Type: css.TokenSemiColon, Data: ";"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
+		{ // 24
+			Input: "@import url(a) layer(a;",
+			Output: []parser.Phrase{
+				{Type: phraseImport, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@import"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenURL, Data: "url(a)"},
+					{Type: css.TokenWhitespace, Data: " "},
+				}},
+				{Type: parser.PhraseError, Data: []parser.Token{
+					{Type: parser.TokenError, Data: "unexpected EOF"},
+				}},
+			},
+		},
 	} {
 		p := createCSSParser(strings.NewReader(test.Input))
 
