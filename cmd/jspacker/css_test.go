@@ -352,6 +352,31 @@ func TestCSSParser(t *testing.T) {
 				{Type: parser.PhraseDone, Data: nil},
 			},
 		},
+		{ // 19
+			Input: "@layer;a",
+			Output: []parser.Phrase{
+				{Type: phraseRemaining, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@layer"},
+					{Type: css.TokenSemiColon, Data: ";"},
+					{Type: css.TokenIdent, Data: "a"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
+		{ // 20
+			Input: "@layer a,;b",
+			Output: []parser.Phrase{
+				{Type: phraseRemaining, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@layer"},
+					{Type: css.TokenWhitespace, Data: " "},
+					{Type: css.TokenIdent, Data: "a"},
+					{Type: css.TokenComma, Data: ","},
+					{Type: css.TokenSemiColon, Data: ";"},
+					{Type: css.TokenIdent, Data: "b"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
 	} {
 		p := createCSSParser(strings.NewReader(test.Input))
 
