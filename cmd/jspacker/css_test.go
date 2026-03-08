@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -435,6 +437,34 @@ func TestCSSLoader(t *testing.T) {
 		if output := (cssLoader{path: test.Input}).Resolve(test.Path).(cssLoader); output.path != test.Output {
 			t.Errorf("%d: expecting %q, got %q", n+1, test.Output, output)
 		}
+	}
+}
+
+func TestCSSLoaderOS(t *testing.T) {
+	tmp := t.TempDir()
+	css := filepath.Join(tmp, "a.css")
+
+	err := os.WriteFile(css, []byte("data"), 0600)
+	if err != nil {
+		t.Fatalf("unexpected error writing file: %v", err)
+	}
+
+	c := cssLoader{base: tmp, path: "/a.css"}
+
+	r, err := c.Open()
+	if err != nil {
+		t.Fatalf("unexpected error opening file: %v", err)
+	}
+
+	defer r.Close()
+
+	data, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatalf("unexpected error reading file: %v", err)
+	}
+
+	if string(data) != "data" {
+		t.Errorf("expecting to read %q, got %q", "data", data)
 	}
 }
 
