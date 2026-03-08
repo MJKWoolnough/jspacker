@@ -385,6 +385,16 @@ func TestCSSParser(t *testing.T) {
 				}},
 			},
 		},
+		{ // 22
+			Input: "@import;",
+			Output: []parser.Phrase{
+				{Type: phraseRemaining, Data: []parser.Token{
+					{Type: css.TokenAtKeyword, Data: "@import"},
+					{Type: css.TokenSemiColon, Data: ";"},
+				}},
+				{Type: parser.PhraseDone, Data: nil},
+			},
+		},
 	} {
 		p := createCSSParser(strings.NewReader(test.Input))
 
