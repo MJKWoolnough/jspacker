@@ -384,11 +384,27 @@ func TestCSSParser(t *testing.T) {
 	}
 }
 
+type memCSSLoader struct {
+	path   string
+	sheets map[string]string
+}
+
+func (m *memCSSLoader) Resolve(path string) CSSLoader {
+	return &memCSSLoader{
+		path:   resolvePath(m.path, path),
+		sheets: m.sheets,
+	}
+}
+
+func (m *memCSSLoader) Open() (io.ReadCloser, error) {
+	return io.NopCloser(strings.NewReader(m.sheets[m.path])), nil
+}
+
 func TestCSSLoader(t *testing.T) {
 	for n, test := range [...]struct {
-		Input  cssLoader
+		Input  string
 		Path   string
-		Output cssLoader
+		Output string
 	}{
 		{ // 1
 			Input:  "/a.css",
@@ -416,26 +432,10 @@ func TestCSSLoader(t *testing.T) {
 			Output: "/c.css",
 		},
 	} {
-		if output := test.Input.Resolve(test.Path).(cssLoader); output != test.Output {
+		if output := (cssLoader{path: test.Input}).Resolve(test.Path).(cssLoader); output.path != test.Output {
 			t.Errorf("%d: expecting %q, got %q", n+1, test.Output, output)
 		}
 	}
-}
-
-type memCSSLoader struct {
-	path   string
-	sheets map[string]string
-}
-
-func (m *memCSSLoader) Resolve(path string) CSSLoader {
-	return &memCSSLoader{
-		path:   resolvePath(m.path, path),
-		sheets: m.sheets,
-	}
-}
-
-func (m *memCSSLoader) Open() (io.ReadCloser, error) {
-	return io.NopCloser(strings.NewReader(m.sheets[m.path])), nil
 }
 
 func TestCombineCSS(t *testing.T) {

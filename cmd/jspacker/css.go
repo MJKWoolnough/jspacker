@@ -16,10 +16,12 @@ type CSSLoader interface {
 	Open() (io.ReadCloser, error)
 }
 
-type cssLoader string
+type cssLoader struct {
+	base, path string
+}
 
 func (c cssLoader) Resolve(path string) CSSLoader {
-	return cssLoader(resolvePath(string(c), path))
+	return cssLoader{base: c.base, path: resolvePath(c.path, path)}
 }
 
 func resolvePath(orig, path string) string {
@@ -31,7 +33,7 @@ func resolvePath(orig, path string) string {
 }
 
 func (c cssLoader) Open() (io.ReadCloser, error) {
-	return os.Open(string(c))
+	return os.Open(filepath.Join(c.base, c.path))
 }
 
 type cssImport struct {
