@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -166,7 +167,9 @@ func processCSS(loader CSSLoader) ([]cssImport, []parser.Token, error) {
 
 	for {
 		ph, err := p.GetPhrase()
-		if err != nil {
+		if errors.Is(err, io.EOF) {
+			return imports, nil, nil
+		} else if err != nil {
 			return nil, nil, err
 		}
 
