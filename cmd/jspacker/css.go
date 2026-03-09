@@ -201,7 +201,7 @@ func processCSS(loader CSSLoader) ([]cssImport, []parser.Token, error) {
 func createCSSParser(r io.Reader) *parser.Parser {
 	p := parser.New(*css.CreateTokeniser(parser.NewReaderTokeniser(r), false))
 
-	p.PhraserState(parseCSS)
+	p.PhraserState(parseSheet)
 
 	return &p
 }
@@ -217,7 +217,7 @@ const (
 	phraseRemaining
 )
 
-func parseCSS(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
+func parseSheet(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 	if p.AcceptToken(parser.Token{Type: css.TokenAtKeyword, Data: "@charset"}) {
 		return parseCharset(p)
 	}
@@ -229,13 +229,13 @@ func parseCharset(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 	p.Accept(css.TokenWhitespace)
 
 	if tk := p.Peek(); tk.Type != css.TokenString || !strings.HasPrefix(tk.Data, `"`) {
-		return rest(p)
+		return parseRemaining(p)
 	}
 
 	p.Next()
 
 	if !p.Accept(css.TokenSemiColon) {
-		return rest(p)
+		return parseRemaining(p)
 	}
 
 	return p.Return(phraseCharset, parseImports)
@@ -251,7 +251,7 @@ func parseImports(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 	if p.AcceptToken(parser.Token{Type: css.TokenAtKeyword, Data: "@layer"}) {
 		return parseLayer(p)
 	} else if !p.AcceptToken(parser.Token{Type: css.TokenAtKeyword, Data: "@import"}) {
-		return rest(p)
+		return parseRemaining(p)
 	}
 
 	return parseImport(p)
@@ -265,7 +265,7 @@ func parseLayer(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 	}
 
 	if !p.Accept(css.TokenIdent) {
-		return rest(p)
+		return parseRemaining(p)
 	}
 
 	p.Accept(css.TokenWhitespace)
@@ -278,14 +278,14 @@ func parseLayer(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 		p.Accept(css.TokenWhitespace)
 
 		if !p.Accept(css.TokenIdent) {
-			return rest(p)
+			return parseRemaining(p)
 		}
 
 		p.Accept(css.TokenWhitespace)
 	}
 
 	if !p.Accept(css.TokenSemiColon) {
-		return rest(p)
+		return parseRemaining(p)
 	}
 
 	return p.Return(phraseLayer, parseImports)
@@ -309,7 +309,7 @@ func parseLayerBlock(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 				return p.Return(phraseLayer, parseImports)
 			}
 		default:
-			return rest(p)
+			return parseRemaining(p)
 		}
 	}
 }
@@ -318,7 +318,7 @@ func parseImport(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 	acceptWhitespaceComments(p)
 
 	if !p.Accept(css.TokenString, css.TokenURL) {
-		return rest(p)
+		return parseRemaining(p)
 	}
 
 	acceptWhitespaceComments(p)
@@ -335,17 +335,17 @@ func parseLayerSupportOrMedia(p *parser.Parser) (parser.Phrase, parser.PhraseFun
 
 	if p.AcceptToken(parser.Token{Type: css.TokenFunction, Data: "layer("}) {
 		if !p.Accept(css.TokenIdent) {
-			return rest(p)
+			return parseRemaining(p)
 		}
 
 		for p.AcceptToken(parser.Token{Type: css.TokenDelim, Data: "."}) {
 			if !p.Accept(css.TokenIdent) {
-				return rest(p)
+				return parseRemaining(p)
 			}
 		}
 
 		if !p.Accept(css.TokenCloseParen) {
-			return rest(p)
+			return parseRemaining(p)
 		}
 
 	} else if !p.AcceptToken(parser.Token{Type: css.TokenIdent, Data: "layer"}) {
@@ -386,7 +386,7 @@ Loop:
 
 			depth++
 		default:
-			return rest(p)
+			return parseRemaining(p)
 		}
 	}
 
@@ -408,14 +408,14 @@ func parseMedia(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 		return p.Return(phraseImportMedia, parseImports)
 	}
 
-	return rest(p)
+	return parseRemaining(p)
 }
 
 func acceptWhitespaceComments(p *parser.Parser) parser.TokenType {
 	return p.AcceptRun(css.TokenWhitespace, css.TokenCDO, css.TokenCDC, css.TokenComment)
 }
 
-func rest(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
+func parseRemaining(p *parser.Parser) (parser.Phrase, parser.PhraseFunc) {
 	if p.ExceptRun(parser.TokenDone, parser.TokenError) == parser.TokenError {
 		return p.ReturnError(p.GetError())
 	}
