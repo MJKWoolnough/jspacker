@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -680,5 +681,33 @@ func TestCombineCSS(t *testing.T) {
 		} else if out := buf.String(); out != test.output {
 			t.Errorf("test %d: expecting output %q, got %q", n+1, test.output, out)
 		}
+	}
+}
+
+func TestCombineCSSOS(t *testing.T) {
+	tmp := t.TempDir()
+	css := filepath.Join(tmp, "a.css")
+
+	err := os.WriteFile(css, []byte("data"), 0600)
+	if err != nil {
+		t.Fatalf("unexpected error writing file: %v", err)
+	}
+
+	c := cssLoader{base: tmp, path: "/a.css"}
+
+	var buf bytes.Buffer
+
+	if err := combineCSS(c, &buf); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if buf.String() != "data" {
+		t.Errorf("expecting to read %q, got %q", "data", buf.String())
+	}
+
+	c.path = "/b.css"
+
+	if err := combineCSS(c, &buf); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("expecting err ErrNotExist, got %v", err)
 	}
 }
