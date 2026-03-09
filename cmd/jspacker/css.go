@@ -54,31 +54,9 @@ func combineCSS(loader CSSLoader, w *bytes.Buffer) error {
 			continue
 		}
 
-		url := getCSSPath(imp.imports)
-
-		var sections cssSection
-
-		if imp.layer != nil {
-			if imp.layer[0].Type == css.TokenIdent {
-				sections.Write(w, "@layer", nil)
-			} else {
-				sections.Write(w, "@layer ", imp.layer[1:len(imp.layer)-2])
-			}
-		}
-
-		if imp.supports != nil {
-			sections.Write(w, "@supports(", imp.supports[1:len(imp.supports)-1])
-		}
-
-		if imp.media != nil {
-			sections.Write(w, "@media ", imp.media)
-		}
-
-		if err := combineCSS(loader.Resolve(url), w); err != nil {
+		if err := writeCSS(loader, w, imp); err != nil {
 			return err
 		}
-
-		sections.Close(w)
 	}
 
 	if len(rest) > 0 {
@@ -98,6 +76,36 @@ func printTokens(w *bytes.Buffer, tks []parser.Token) {
 	for _, tk := range tks {
 		w.WriteString(tk.Data)
 	}
+}
+
+func writeCSS(loader CSSLoader, w *bytes.Buffer, imp cssImport) error {
+	url := getCSSPath(imp.imports)
+
+	var sections cssSection
+
+	if imp.layer != nil {
+		if imp.layer[0].Type == css.TokenIdent {
+			sections.Write(w, "@layer", nil)
+		} else {
+			sections.Write(w, "@layer ", imp.layer[1:len(imp.layer)-2])
+		}
+	}
+
+	if imp.supports != nil {
+		sections.Write(w, "@supports(", imp.supports[1:len(imp.supports)-1])
+	}
+
+	if imp.media != nil {
+		sections.Write(w, "@media ", imp.media)
+	}
+
+	if err := combineCSS(loader.Resolve(url), w); err != nil {
+		return err
+	}
+
+	sections.Close(w)
+
+	return nil
 }
 
 func lastByte(bytes []byte) byte {
