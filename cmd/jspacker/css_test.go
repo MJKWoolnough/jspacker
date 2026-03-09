@@ -669,7 +669,7 @@ func TestCombineCSS(t *testing.T) {
 			sheets: map[string]string{"/a.css": `@import "b.css";abc`, "/b.css": "def{"},
 			err:    io.ErrUnexpectedEOF,
 		},
-		{ // 17
+		{ // 18
 			sheets: map[string]string{"/a.css": `@import "b.css";`, "/b.css": "abc"},
 			output: "abc",
 		},
