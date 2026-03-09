@@ -178,8 +178,6 @@ func processCSS(loader CSSLoader) ([]cssImport, []parser.Token, error) {
 			imports[len(imports)-1].media = ph.Data
 		case phraseRemaining:
 			return imports, ph.Data, nil
-		case parser.PhraseError:
-			return nil, nil, p.Err
 		}
 	}
 }
