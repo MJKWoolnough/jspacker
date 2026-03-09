@@ -53,10 +53,7 @@ func combineCSS(loader CSSLoader, w *bytes.Buffer) error {
 			continue
 		}
 
-		url, err := getCSSPath(imp.imports)
-		if err != nil {
-			return err
-		}
+		url := getCSSPath(imp.imports)
 
 		var sections cssSection
 
@@ -134,17 +131,25 @@ func (c *cssSection) Close(w *bytes.Buffer) {
 	}
 }
 
-func getCSSPath(imp []parser.Token) (string, error) {
+func getCSSPath(imp []parser.Token) string {
+	var url string
+
 	for _, i := range imp {
+		var fn func(string) (string, error)
+
 		switch i.Type {
 		case css.TokenURL:
-			return css.UnURL(i.Data)
+			fn = css.UnURL
 		case css.TokenString:
-			return css.Unquote(i.Data)
+			fn = css.Unquote
+		default:
+			continue
 		}
+
+		url, _ = fn(i.Data)
 	}
 
-	return "", nil
+	return url
 }
 
 func processCSS(loader CSSLoader) ([]cssImport, []parser.Token, error) {
