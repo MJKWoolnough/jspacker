@@ -660,6 +660,10 @@ func TestCombineCSS(t *testing.T) {
 			sheets: map[string]string{"/a.css": `@charset "utf-8";@layer a {stuff}@import "b.css";abc`, "/b.css": "def"},
 			output: "@charset \"utf-8\";@layer a {stuff}def\nabc",
 		},
+		{ // 16
+			sheets: map[string]string{"/a.css": "abc{"},
+			err:    io.ErrUnexpectedEOF,
+		},
 	} {
 		var buf bytes.Buffer
 
