@@ -14,32 +14,12 @@ import (
 	"vimagination.zapto.org/parser"
 )
 
-func (c *Config) processHTMLInput() error {
-	if len(c.filesTodo) != 1 {
-		return ErrInvalidHTMLInput
-	}
-
-	f, err := os.Open(c.filesTodo[0])
+func (c *Config) processHTML() (err error) {
+	h, err := c.processHTMLInput()
 	if err != nil {
 		return err
 	}
 
-	defer f.Close()
-
-	h := newHTMLState(f)
-
-	for {
-		if err := h.processToken(); errors.Is(err, io.EOF) {
-			break
-		} else if err != nil {
-			return fmt.Errorf("error parsing HTML input: %w", err)
-		}
-	}
-
-	return c.writeHTML(h)
-}
-
-func (c *Config) writeHTML(h *htmlState) (err error) {
 	f, err := c.outputFile()
 	if err != nil {
 		return err
@@ -58,10 +38,35 @@ func (c *Config) writeHTML(h *htmlState) (err error) {
 		}
 	}
 
-	return c.writeHTMLContents(f, h)
+	return c.writeHTML(f, h)
 }
 
-func (c *Config) writeHTMLContents(w io.Writer, h *htmlState) error {
+func (c *Config) processHTMLInput() (*htmlState, error) {
+	if len(c.filesTodo) != 1 {
+		return nil, ErrInvalidHTMLInput
+	}
+
+	f, err := os.Open(c.filesTodo[0])
+	if err != nil {
+		return nil, err
+	}
+
+	defer f.Close()
+
+	h := newHTMLState(f)
+
+	for {
+		if err := h.processToken(); errors.Is(err, io.EOF) {
+			break
+		} else if err != nil {
+			return nil, fmt.Errorf("error parsing HTML input: %w", err)
+		}
+	}
+
+	return h, nil
+}
+
+func (c *Config) writeHTML(w io.Writer, h *htmlState) error {
 	html := h.buf.String()
 
 	var lastPos int64

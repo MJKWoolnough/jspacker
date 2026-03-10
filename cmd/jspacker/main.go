@@ -129,7 +129,7 @@ func run() error {
 	}
 
 	if c.processHTMLFile {
-		return c.processHTMLInput()
+		return c.processHTML()
 	}
 
 	return c.processJavascript()
