@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"vimagination.zapto.org/javascript"
@@ -46,9 +47,15 @@ func (c *Config) processHTMLInput() (*htmlState, error) {
 		return nil, ErrInvalidHTMLInput
 	}
 
-	f, err := os.Open(c.filesTodo[0])
-	if err != nil {
-		return nil, err
+	f := os.Stdin
+
+	if c.filesTodo[0] != "-" {
+		var err error
+
+		f, err = os.Open(filepath.Join(c.base, c.filesTodo[0]))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	defer f.Close()
