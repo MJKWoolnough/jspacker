@@ -32,9 +32,10 @@ func TestProcessHTMLInput(t *testing.T) {
 				"index.html": `<html>
 	<head>
 		<title>Test</title>
-		<script type="module">a;</script>
+		<script type="module" src="a.js"></script>
 	</head>
 </html>`,
+				"a.js": "a;",
 			},
 			output: `<html>
 	<head>
@@ -42,7 +43,7 @@ func TestProcessHTMLInput(t *testing.T) {
 		<script type="module">const a_ = {};
 
 Object.defineProperty(globalThis, include, {value: (() => {
-		const imports = new Map([["/\x00", a_]]);
+		const imports = new Map([["/a.js", a_]]);
 		return url => (imports.get(url) ?? import(url));
 	})()});
 
