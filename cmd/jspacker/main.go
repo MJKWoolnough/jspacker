@@ -18,11 +18,11 @@ import (
 )
 
 type Config struct {
-	output, base, html                                            string
-	filesTodo                                                     Inputs
-	plugin, noExports, exports, processHTML, processCSS, compress bool
-	importMap                                                     ImportMap
-	minifier                                                      Minifier
+	output, base, html                                                string
+	filesTodo                                                         Inputs
+	plugin, noExports, exports, processHTMLFile, processCSS, compress bool
+	importMap                                                         ImportMap
+	minifier                                                          Minifier
 }
 
 type Inputs []string
@@ -128,7 +128,7 @@ func run() error {
 		return err
 	}
 
-	if c.processHTML {
+	if c.processHTMLFile {
 		return c.processHTMLInput()
 	}
 
@@ -144,7 +144,7 @@ func parseConfig() (*Config, error) {
 	flag.BoolVar(&config.plugin, "p", false, "export file as plugin")
 	flag.BoolVar(&config.noExports, "n", false, "no exports")
 	flag.BoolVar(&config.exports, "e", false, "keep primary file exports")
-	flag.BoolVar(&config.processHTML, "P", false, "process input file as HTML, packing JavaScript sources in-place (implies -H with the input file)")
+	flag.BoolVar(&config.processHTMLFile, "P", false, "process input file as HTML, packing JavaScript sources in-place (implies -H with the input file)")
 	flag.BoolVar(&config.processCSS, "c", false, "embed linked CSS in HTML file")
 	flag.Var(config.importMap, "m", "import map used to resolve import URLs; can be specified as a JSON file or as individual KEY=VALUE pairs")
 	flag.StringVar(&config.html, "H", "", "parse import map from HTML file")
