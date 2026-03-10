@@ -4,8 +4,39 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+func TestProcessHTMLInput(t *testing.T) {
+	for n, test := range [...]struct {
+		input  map[string]string
+		output string
+	}{} {
+		tmp := t.TempDir()
+
+		for file, data := range test.input {
+			if err := os.WriteFile(filepath.Join(tmp, file), []byte(data), 0600); err != nil {
+				t.Fatalf("test %d: unexpected error: %v", n+1, err)
+			}
+		}
+
+		c := Config{
+			filesTodo: []string{"/index.html"},
+			base:      tmp,
+		}
+
+		var buf strings.Builder
+
+		if h, err := c.processHTMLInput(); err != nil {
+			t.Errorf("test %d: unexpected error: %v", n+1, err)
+		} else if err := c.writeHTML(&buf, h); err != nil {
+			t.Errorf("test %d: unexpected error: %v", n+1, err)
+		} else if str := buf.String(); str != test.output {
+			t.Errorf("test %d: expecting output %q, got %q", n+1, test.output, str)
+		}
+	}
+}
 
 func TestScriptLoader(t *testing.T) {
 	tmp := t.TempDir()
