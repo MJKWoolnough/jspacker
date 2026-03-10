@@ -12,7 +12,22 @@ func TestProcessHTMLInput(t *testing.T) {
 	for n, test := range [...]struct {
 		input  map[string]string
 		output string
-	}{} {
+	}{
+		{
+			input: map[string]string{
+				"index.html": `<html>
+	<head>
+		<title>Test</title>
+	</head>
+</html>`,
+			},
+			output: `<html>
+	<head>
+		<title>Test</title>
+	</head>
+</html>`,
+		},
+	} {
 		tmp := t.TempDir()
 
 		for file, data := range test.input {
