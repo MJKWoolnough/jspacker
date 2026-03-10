@@ -100,20 +100,21 @@ func (c *Config) writeHTML(w io.Writer, h *htmlState) error {
 }
 
 func (c *Config) processScript(w io.Writer, html string, script script) error {
-	opts := c.Options()
+	var opts []jspacker.Option
 
 	if _, err := io.WriteString(w, `<script type="module">`); err != nil {
 		return err
 	}
 
 	if script.src == "" {
-		opts = append(opts, jspacker.Loader(scriptLoader(html[script.contentStart:script.contentEnd], c.base)))
 		c.filesTodo[0] = "/\x00"
+		opts = append(c.Options(), jspacker.Loader(scriptLoader(html[script.contentStart:script.contentEnd], c.base)))
 	} else {
 		c.filesTodo[0] = path.Join("/", script.src)
+		opts = c.Options()
 	}
 
-	m, err := jspacker.Package(c.Options()...)
+	m, err := jspacker.Package(opts...)
 	if err != nil {
 		return fmt.Errorf("error generating output: %w", err)
 	}
