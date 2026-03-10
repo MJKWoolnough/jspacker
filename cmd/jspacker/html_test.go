@@ -27,6 +27,30 @@ func TestProcessHTMLInput(t *testing.T) {
 	</head>
 </html>`,
 		},
+		{
+			input: map[string]string{
+				"index.html": `<html>
+	<head>
+		<title>Test</title>
+		<script type="module">a;</script>
+	</head>
+</html>`,
+			},
+			output: `<html>
+	<head>
+		<title>Test</title>
+		<script type="module">const a_ = {};
+
+Object.defineProperty(globalThis, include, {value: (() => {
+		const imports = new Map([["/\x00", a_]]);
+		return url => (imports.get(url) ?? import(url));
+	})()});
+
+a;
+</script>
+	</head>
+</html>`,
+		},
 	} {
 		tmp := t.TempDir()
 
@@ -39,6 +63,7 @@ func TestProcessHTMLInput(t *testing.T) {
 		c := Config{
 			filesTodo: []string{"/index.html"},
 			base:      tmp,
+			noExports: true,
 		}
 
 		var buf strings.Builder
