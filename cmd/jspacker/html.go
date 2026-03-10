@@ -15,6 +15,13 @@ import (
 )
 
 func (c *Config) processHTML() (err error) {
+	if c.base == "" {
+		c.base, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	}
+
 	h, err := c.processHTMLInput()
 	if err != nil {
 		return err
@@ -30,13 +37,6 @@ func (c *Config) processHTML() (err error) {
 			err = errr
 		}
 	}()
-
-	if c.base == "" {
-		c.base, err = os.Getwd()
-		if err != nil {
-			return err
-		}
-	}
 
 	return c.writeHTML(f, h)
 }
