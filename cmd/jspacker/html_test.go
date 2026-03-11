@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -53,6 +54,18 @@ a;
 </script>
 	</head>
 </html>`,
+		},
+		{
+			input: map[string]string{
+				"index.html": `<html>
+	<head>
+		<title>Test</title>
+		<script type="module" src="@abc"></script>
+	</head>
+</html>`,
+				"a.js": "a;",
+			},
+			outErr: fs.ErrNotExist,
 		},
 	} {
 		tmp := t.TempDir()
