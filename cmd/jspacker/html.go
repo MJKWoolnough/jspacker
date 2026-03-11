@@ -100,21 +100,10 @@ func (c *Config) writeHTML(w io.Writer, h *htmlState) error {
 				return err
 			}
 		case tagStyle:
-			var buf bytes.Buffer
-
-			if err := combineCSS(cssLoader{base: c.base, path: "/", source: html[tag.contentStart:tag.contentEnd]}, &buf); err != nil {
+			if err := c.processStyle(w, html, tag); err != nil {
 				return err
 			}
 
-			if _, err := w.Write(styleStart); err != nil {
-				return err
-			}
-
-			buf.WriteString(string(styleEnd))
-
-			if _, err := io.Copy(w, &buf); err != nil {
-				return err
-			}
 		}
 
 		lastPos = tag.tagEnd
@@ -152,6 +141,26 @@ func (c *Config) processScript(w io.Writer, html string, script tag) error {
 	_, err = io.WriteString(w, `</script>`)
 
 	return err
+}
+
+func (c *Config) processStyle(w io.Writer, html string, tag tag) error {
+	var buf bytes.Buffer
+
+	if err := combineCSS(cssLoader{base: c.base, path: "/", source: html[tag.contentStart:tag.contentEnd]}, &buf); err != nil {
+		return err
+	}
+
+	if _, err := w.Write(styleStart); err != nil {
+		return err
+	}
+
+	buf.WriteString(string(styleEnd))
+
+	if _, err := io.Copy(w, &buf); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type htmlState struct {
