@@ -67,6 +67,33 @@ a;
 			},
 			outErr: fs.ErrNotExist,
 		},
+		{
+			input: map[string]string{
+				"index.html": `<html>
+	<head>
+		<title>Test</title>
+		<script type="importmap">{"imports":{"@abc":"a.js"}}</script>
+		<script type="module" src="@abc"></script>
+	</head>
+</html>`,
+				"a.js": "a;",
+			},
+			output: `<html>
+	<head>
+		<title>Test</title>
+		
+		<script type="module">const a_ = {};
+
+Object.defineProperty(globalThis, include, {value: (() => {
+		const imports = new Map([["/a.js", a_]]);
+		return url => (imports.get(url) ?? import(url));
+	})()});
+
+a;
+</script>
+	</head>
+</html>`,
+		},
 	} {
 		tmp := t.TempDir()
 
@@ -79,6 +106,7 @@ a;
 		c := Config{
 			filesTodo: []string{"/index.html"},
 			base:      tmp,
+			importMap: make(ImportMap),
 			noExports: true,
 		}
 
