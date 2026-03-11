@@ -35,6 +35,32 @@ func TestProcessHTMLInput(t *testing.T) {
 				"index.html": `<html>
 	<head>
 		<title>Test</title>
+		<script type="module">import './a.js';</script>
+	</head>
+</html>`,
+				"a.js": "a;",
+			},
+			output: `<html>
+	<head>
+		<title>Test</title>
+		<script type="module">const a_ = {},
+b_ = {};
+
+Object.defineProperty(globalThis, include, {value: (() => {
+		const imports = new Map([["/\x00", a_], ["/a.js", b_]]);
+		return url => (imports.get(url) ?? import(url));
+	})()});
+
+a;
+</script>
+	</head>
+</html>`,
+		},
+		{
+			input: map[string]string{
+				"index.html": `<html>
+	<head>
+		<title>Test</title>
 		<script type="module" src="a.js"></script>
 	</head>
 </html>`,
