@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -61,6 +62,8 @@ func (c *Config) processHTMLInput() (*htmlState, error) {
 
 	h := newHTMLState(f)
 
+	h.processCSS = c.processCSS
+
 	for {
 		if err := h.processToken(); errors.Is(err, io.EOF) {
 			break
@@ -72,25 +75,49 @@ func (c *Config) processHTMLInput() (*htmlState, error) {
 	return h, nil
 }
 
+var (
+	styleStart = []byte(`<style type="text/css">`)
+	styleEnd   = []byte(`</style>`)
+)
+
 func (c *Config) writeHTML(w io.Writer, h *htmlState) error {
 	html := h.buf.String()
 
 	var lastPos int64
 
-	for _, script := range h.scripts {
-		if _, err := io.WriteString(w, html[lastPos:script.tagStart]); err != nil {
+	for _, tag := range h.tags {
+		if _, err := io.WriteString(w, html[lastPos:tag.tagStart]); err != nil {
 			return err
 		}
 
-		if script.isMap {
-			if err := c.importMap.Import(strings.NewReader(html[script.contentStart:script.contentEnd])); err != nil {
+		switch tag.tagType {
+		case tagImportMap:
+			if err := c.importMap.Import(strings.NewReader(html[tag.contentStart:tag.contentEnd])); err != nil {
 				return err
 			}
-		} else if err := c.processScript(w, html, script); err != nil {
-			return err
+		case tagScript:
+			if err := c.processScript(w, html, tag); err != nil {
+				return err
+			}
+		case tagStyle:
+			var buf bytes.Buffer
+
+			if err := combineCSS(cssLoader{base: c.base, path: "/", source: html[tag.contentStart:tag.contentEnd]}, &buf); err != nil {
+				return err
+			}
+
+			if _, err := w.Write(styleStart); err != nil {
+				return err
+			}
+
+			buf.WriteString(string(styleEnd))
+
+			if _, err := io.Copy(w, &buf); err != nil {
+				return err
+			}
 		}
 
-		lastPos = script.tagEnd
+		lastPos = tag.tagEnd
 	}
 
 	_, err := io.WriteString(w, html[lastPos:])
@@ -98,7 +125,7 @@ func (c *Config) writeHTML(w io.Writer, h *htmlState) error {
 	return err
 }
 
-func (c *Config) processScript(w io.Writer, html string, script script) error {
+func (c *Config) processScript(w io.Writer, html string, script tag) error {
 	var opts []jspacker.Option
 
 	if _, err := io.WriteString(w, `<script type="module">`); err != nil {
@@ -128,11 +155,12 @@ func (c *Config) processScript(w io.Writer, html string, script script) error {
 }
 
 type htmlState struct {
-	buf      strings.Builder
-	scripts  []script
-	dec      *xml.Decoder
-	lastPos  int64
-	inScript bool
+	processCSS        bool
+	buf               strings.Builder
+	tags              []tag
+	dec               *xml.Decoder
+	lastPos           int64
+	inScript, inStyle bool
 }
 
 func newHTMLState(r io.Reader) *htmlState {
@@ -153,9 +181,19 @@ func (h *htmlState) processToken() error {
 
 	switch tk := tk.(type) {
 	case xml.StartElement:
-		h.addScript(tk)
+		switch tk.Name.Local {
+		case "script":
+			h.addTag(tk)
+		case "style":
+			h.addStyle()
+		}
 	case xml.EndElement:
-		h.endScript(tk)
+		switch tk.Name.Local {
+		case "script":
+			h.endScript(tk)
+		case "style":
+			h.endStyle()
+		}
 	}
 
 	h.lastPos = h.dec.InputOffset()
@@ -163,12 +201,13 @@ func (h *htmlState) processToken() error {
 	return nil
 }
 
-func (h *htmlState) addScript(tk xml.StartElement) {
-	if h.inScript || tk.Name.Local != "script" {
+func (h *htmlState) addTag(tk xml.StartElement) {
+	if h.inScript {
 		return
 	}
 
-	s := script{
+	s := tag{
+		tagType:      tagScript,
 		tagStart:     h.lastPos,
 		contentStart: h.dec.InputOffset(),
 	}
@@ -178,7 +217,7 @@ func (h *htmlState) addScript(tk xml.StartElement) {
 		case "type":
 			switch attr.Value {
 			case "importmap":
-				s.isMap = true
+				s.tagType = tagImportMap
 			}
 		case "src":
 			s.src = attr.Value
@@ -186,7 +225,20 @@ func (h *htmlState) addScript(tk xml.StartElement) {
 	}
 
 	h.inScript = true
-	h.scripts = append(h.scripts, s)
+	h.tags = append(h.tags, s)
+}
+
+func (h *htmlState) addStyle() {
+	if h.inStyle || !h.processCSS {
+		return
+	}
+
+	h.inStyle = true
+	h.tags = append(h.tags, tag{
+		tagType:      tagStyle,
+		tagStart:     h.lastPos,
+		contentStart: h.dec.InputOffset(),
+	})
 }
 
 func (h *htmlState) endScript(tk xml.EndElement) {
@@ -195,14 +247,32 @@ func (h *htmlState) endScript(tk xml.EndElement) {
 	}
 
 	h.inScript = false
-	h.scripts[len(h.scripts)-1].contentEnd = h.lastPos
-	h.scripts[len(h.scripts)-1].tagEnd = h.dec.InputOffset()
+	h.tags[len(h.tags)-1].contentEnd = h.lastPos
+	h.tags[len(h.tags)-1].tagEnd = h.dec.InputOffset()
 }
 
-type script struct {
+func (h *htmlState) endStyle() {
+	if !h.inStyle {
+		return
+	}
+
+	h.inStyle = false
+	h.tags[len(h.tags)-1].contentEnd = h.lastPos
+	h.tags[len(h.tags)-1].tagEnd = h.dec.InputOffset()
+}
+
+type tagType uint8
+
+const (
+	tagScript tagType = iota
+	tagImportMap
+	tagStyle
+)
+
+type tag struct {
+	tagType                                    tagType
 	tagStart, tagEnd, contentStart, contentEnd int64
 	src                                        string
-	isMap                                      bool
 }
 
 func scriptLoader(src, base string) func(string) (*javascript.Module, error) {
