@@ -18,7 +18,7 @@ type CSSLoader interface {
 }
 
 type cssLoader struct {
-	base, path string
+	base, path, source string
 }
 
 func (c cssLoader) Resolve(path string) CSSLoader {
@@ -34,6 +34,10 @@ func resolvePath(orig, path string) string {
 }
 
 func (c cssLoader) Open() (io.ReadCloser, error) {
+	if c.source != "" {
+		return io.NopCloser(strings.NewReader(c.source)), nil
+	}
+
 	return os.Open(filepath.Join(c.base, c.path))
 }
 
