@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -110,7 +109,7 @@ func (c *Config) processScript(w io.Writer, html string, script script) error {
 		c.filesTodo[0] = "/\x00"
 		opts = append(c.Options(), jspacker.Loader(scriptLoader(html[script.contentStart:script.contentEnd], c.base)))
 	} else {
-		c.filesTodo[0] = path.Join("/", script.src)
+		c.filesTodo[0] = c.importMap.Resolve("/", script.src)
 		opts = c.Options()
 	}
 
