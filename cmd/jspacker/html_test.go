@@ -120,6 +120,23 @@ a;
 	</head>
 </html>`,
 		},
+		{ // 6
+			input: map[string]string{
+				"index.html": `<html>
+	<head>
+		<style type="text/css">@import url(a.css);abc</style>
+		<title>Test</title>
+	</head>
+</html>`,
+				"a.css": "def;",
+			},
+			output: `<html>
+	<head>
+		<style type="text/css">def;abc</style>
+		<title>Test</title>
+	</head>
+</html>`,
+		},
 	} {
 		tmp := t.TempDir()
 
@@ -130,10 +147,11 @@ a;
 		}
 
 		c := Config{
-			filesTodo: []string{"/index.html"},
-			base:      tmp,
-			importMap: make(ImportMap),
-			noExports: true,
+			filesTodo:  []string{"/index.html"},
+			base:       tmp,
+			importMap:  make(ImportMap),
+			noExports:  true,
+			processCSS: true,
 		}
 
 		var buf strings.Builder
