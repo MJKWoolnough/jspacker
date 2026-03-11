@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,8 +11,9 @@ import (
 
 func TestProcessHTMLInput(t *testing.T) {
 	for n, test := range [...]struct {
-		input  map[string]string
-		output string
+		input         map[string]string
+		output        string
+		inErr, outErr error
 	}{
 		{
 			input: map[string]string{
@@ -69,12 +71,12 @@ a;
 
 		var buf strings.Builder
 
-		if h, err := c.processHTMLInput(); err != nil {
-			t.Errorf("test %d: unexpected error: %v", n+1, err)
-		} else if err := c.writeHTML(&buf, h); err != nil {
-			t.Errorf("test %d: unexpected error: %v", n+1, err)
-		} else if str := buf.String(); str != test.output {
-			t.Errorf("test %d: expecting output %q, got %q", n+1, test.output, str)
+		if h, err := c.processHTMLInput(); !errors.Is(err, test.inErr) {
+			t.Errorf("test %d.1: expecting error %v, got %v", n+1, test.inErr, err)
+		} else if err = c.writeHTML(&buf, h); test.inErr == nil && !errors.Is(err, test.outErr) {
+			t.Errorf("test %d.2: expecting error %v, got %v", n+1, test.outErr, err)
+		} else if str := buf.String(); test.inErr == nil && test.outErr == nil && str != test.output {
+			t.Errorf("test %d.3: expecting output %q, got %q", n+1, test.output, str)
 		}
 	}
 }
