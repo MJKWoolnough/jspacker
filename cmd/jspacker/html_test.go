@@ -16,7 +16,7 @@ func TestProcessHTMLInput(t *testing.T) {
 		output        string
 		inErr, outErr error
 	}{
-		{
+		{ // 1
 			input: map[string]string{
 				"index.html": `<html>
 	<head>
@@ -30,7 +30,7 @@ func TestProcessHTMLInput(t *testing.T) {
 	</head>
 </html>`,
 		},
-		{
+		{ // 2
 			input: map[string]string{
 				"index.html": `<html>
 	<head>
@@ -56,7 +56,7 @@ a;
 	</head>
 </html>`,
 		},
-		{
+		{ // 3
 			input: map[string]string{
 				"index.html": `<html>
 	<head>
@@ -81,7 +81,7 @@ a;
 	</head>
 </html>`,
 		},
-		{
+		{ // 4
 			input: map[string]string{
 				"index.html": `<html>
 	<head>
@@ -93,7 +93,7 @@ a;
 			},
 			outErr: fs.ErrNotExist,
 		},
-		{
+		{ // 5
 			input: map[string]string{
 				"index.html": `<html>
 	<head>
