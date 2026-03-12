@@ -147,9 +147,13 @@ func (c *Config) processScript(w io.Writer, html string, script tag) error {
 }
 
 func (c *Config) processStyle(w io.Writer, html string, tag tag) error {
+	return c.processCSSData(w, cssLoader{base: c.base, path: "/", source: html[tag.contentStart:tag.contentEnd]})
+}
+
+func (c *Config) processCSSData(w io.Writer, cs CSSLoader) error {
 	var buf bytes.Buffer
 
-	if err := combineCSS(cssLoader{base: c.base, path: "/", source: html[tag.contentStart:tag.contentEnd]}, &buf); err != nil {
+	if err := combineCSS(cs, &buf); err != nil {
 		return err
 	}
 
@@ -167,23 +171,7 @@ func (c *Config) processStyle(w io.Writer, html string, tag tag) error {
 }
 
 func (c *Config) processLink(w io.Writer, tag tag) error {
-	var buf bytes.Buffer
-
-	if err := combineCSS((cssLoader{base: c.base, path: c.html}).Resolve(tag.src), &buf); err != nil {
-		return err
-	}
-
-	if _, err := w.Write(styleStart); err != nil {
-		return err
-	}
-
-	buf.WriteString(string(styleEnd))
-
-	if _, err := io.Copy(w, &buf); err != nil {
-		return err
-	}
-
-	return nil
+	return c.processCSSData(w, (cssLoader{base: c.base, path: c.html}).Resolve(tag.src))
 }
 
 type htmlState struct {
