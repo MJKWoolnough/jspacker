@@ -137,6 +137,23 @@ a;
 	</head>
 </html>`,
 		},
+		{ // 7
+			input: map[string]string{
+				"index.html": `<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="a.css" />
+		<title>Test</title>
+	</head>
+</html>`,
+				"a.css": "abc;",
+			},
+			output: `<html>
+	<head>
+		<style type="text/css">abc;</style>
+		<title>Test</title>
+	</head>
+</html>`,
+		},
 	} {
 		tmp := t.TempDir()
 
