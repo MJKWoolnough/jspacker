@@ -103,7 +103,10 @@ func (c *Config) writeHTML(w io.Writer, h *htmlState) error {
 			if err := c.processStyle(w, html, tag); err != nil {
 				return err
 			}
-
+		case tagLink:
+			if err := c.processLink(w, tag); err != nil {
+				return err
+			}
 		}
 
 		lastPos = tag.tagEnd
@@ -163,13 +166,33 @@ func (c *Config) processStyle(w io.Writer, html string, tag tag) error {
 	return nil
 }
 
+func (c *Config) processLink(w io.Writer, tag tag) error {
+	var buf bytes.Buffer
+
+	if err := combineCSS((cssLoader{base: c.base, path: c.html}).Resolve(tag.src), &buf); err != nil {
+		return err
+	}
+
+	if _, err := w.Write(styleStart); err != nil {
+		return err
+	}
+
+	buf.WriteString(string(styleEnd))
+
+	if _, err := io.Copy(w, &buf); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type htmlState struct {
-	processCSS        bool
-	buf               strings.Builder
-	tags              []tag
-	dec               *xml.Decoder
-	lastPos           int64
-	inScript, inStyle bool
+	processCSS                bool
+	buf                       strings.Builder
+	tags                      []tag
+	dec                       *xml.Decoder
+	lastPos                   int64
+	inScript, inStyle, inLink bool
 }
 
 func newHTMLState(r io.Reader) *htmlState {
@@ -192,9 +215,11 @@ func (h *htmlState) processToken() error {
 	case xml.StartElement:
 		switch tk.Name.Local {
 		case "script":
-			h.addTag(tk)
+			h.addScript(tk)
 		case "style":
 			h.addStyle()
+		case "link":
+			h.addLink(tk)
 		}
 	case xml.EndElement:
 		switch tk.Name.Local {
@@ -202,6 +227,8 @@ func (h *htmlState) processToken() error {
 			h.endScript(tk)
 		case "style":
 			h.endStyle()
+		case "link":
+			h.endLink()
 		}
 	}
 
@@ -210,7 +237,7 @@ func (h *htmlState) processToken() error {
 	return nil
 }
 
-func (h *htmlState) addTag(tk xml.StartElement) {
+func (h *htmlState) addScript(tk xml.StartElement) {
 	if h.inScript {
 		return
 	}
@@ -250,6 +277,36 @@ func (h *htmlState) addStyle() {
 	})
 }
 
+func (h *htmlState) addLink(tk xml.StartElement) {
+	if h.inLink || !h.processCSS {
+		return
+	}
+
+	s := tag{
+		tagType:      tagLink,
+		tagStart:     h.lastPos,
+		contentStart: h.dec.InputOffset(),
+	}
+
+	var rel string
+
+	for _, attr := range tk.Attr {
+		switch attr.Name.Local {
+		case "rel":
+			rel = attr.Value
+		case "href":
+			s.src = attr.Value
+		}
+	}
+
+	if rel != "stylesheet" {
+		return
+	}
+
+	h.inLink = true
+	h.tags = append(h.tags, s)
+}
+
 func (h *htmlState) endScript(tk xml.EndElement) {
 	if !h.inScript || tk.Name.Local != "script" {
 		return
@@ -270,12 +327,23 @@ func (h *htmlState) endStyle() {
 	h.tags[len(h.tags)-1].tagEnd = h.dec.InputOffset()
 }
 
+func (h *htmlState) endLink() {
+	if !h.inLink {
+		return
+	}
+
+	h.inLink = false
+	h.tags[len(h.tags)-1].contentEnd = h.lastPos
+	h.tags[len(h.tags)-1].tagEnd = h.dec.InputOffset()
+}
+
 type tagType uint8
 
 const (
 	tagScript tagType = iota
 	tagImportMap
 	tagStyle
+	tagLink
 )
 
 type tag struct {
