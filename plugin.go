@@ -149,11 +149,12 @@ func (p *plugin) processExport(ed *javascript.ExportDeclaration) {
 }
 
 func (p *plugin) addIncludes() {
-	if p.imports == 0 {
+	switch p.imports {
+	case 0:
 		p.ModuleListItems = p.ModuleListItems[1:]
-	} else if p.imports == 1 {
+	case 1:
 		p.ModuleListItems[0] = wrapIncludeCall(p.importObjectBindings[0].SingleNameBinding, p.importURLsArray)
-	} else {
+	default:
 		p.ModuleListItems[0] = wrapIncludeAllCall(p.importObjectBindings, p.importURLsArrayE)
 	}
 }
