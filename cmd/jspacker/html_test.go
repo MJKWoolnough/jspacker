@@ -43,10 +43,7 @@ func TestProcessHTMLInput(t *testing.T) {
 			output: `<html>
 	<head>
 		<title>Test</title>
-		<script type="module">const a_ = {},
-b_ = {};
-
-a;
+		<script type="module">a;
 </script>
 	</head>
 </html>`,
@@ -64,9 +61,7 @@ a;
 			output: `<html>
 	<head>
 		<title>Test</title>
-		<script type="module">const a_ = {};
-
-a;
+		<script type="module">a;
 </script>
 	</head>
 </html>`,
@@ -98,9 +93,7 @@ a;
 	<head>
 		<title>Test</title>
 		
-		<script type="module">const a_ = {};
-
-a;
+		<script type="module">a;
 </script>
 	</head>
 </html>`,
