@@ -46,7 +46,7 @@ func (c *config) processFiles() ([]javascript.LexicalBinding, error) {
 	obs := make([]javascript.LexicalBinding, 0, len(c.filesDone))
 
 	for _, file := range sortedMap(c.filesDone) {
-		if !file.requireNamespace && c.bare && !c.parseDynamic && !c.dynamicRequirement {
+		if !file.requireNamespace && c.bare && (!c.parseDynamic || !c.dynamicRequirement) {
 			continue
 		}
 
