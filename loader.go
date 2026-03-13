@@ -27,7 +27,7 @@ func (c *config) makeLoader() error {
 
 	c.moduleItems = slices.Insert(c.moduleItems, 0, wrapConst(obs))
 
-	if c.bare && !c.parseDynamic {
+	if c.bare && (!c.parseDynamic || !c.dynamicRequirement) {
 		return nil
 	}
 
