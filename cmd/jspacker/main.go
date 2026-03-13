@@ -140,7 +140,7 @@ func parseConfig() (*Config, error) {
 
 	flag.Var(&config.filesTodo, "i", "input file")
 	flag.StringVar(&config.output, "o", "-", "output file")
-	flag.StringVar(&config.base, "b", "", "js base dir")
+	flag.StringVar(&config.base, "b", "", "base dir")
 	flag.BoolVar(&config.plugin, "p", false, "export file as plugin")
 	flag.BoolVar(&config.noExports, "n", false, "no exports")
 	flag.BoolVar(&config.exports, "e", false, "keep primary file exports")
