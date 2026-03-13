@@ -597,9 +597,10 @@ func TestCSSLoaderOS(t *testing.T) {
 
 func TestCombineCSS(t *testing.T) {
 	for n, test := range [...]struct {
-		sheets map[string]string
-		output string
-		err    error
+		sheets   map[string]string
+		output   string
+		minimise bool
+		err      error
 	}{
 		{ // 1
 			sheets: map[string]string{"/a.css": "abc"},
@@ -673,10 +674,19 @@ func TestCombineCSS(t *testing.T) {
 			sheets: map[string]string{"/a.css": `@import "b.css";`, "/b.css": "abc"},
 			output: "abc",
 		},
+		{ // 19
+			sheets: map[string]string{"/a.css": "@import \"b.css\"; a {\n\tb: c;\n}", "/b.css": "abc: def;"},
+			output: "abc: def;a {\n\tb: c;\n}",
+		},
+		{ // 20
+			sheets:   map[string]string{"/a.css": "@import \"b.css\"; a {\n\tb: c;\n}", "/b.css": "abc: def;"},
+			output:   "abc:def;a{b:c;}",
+			minimise: true,
+		},
 	} {
 		var buf bytes.Buffer
 
-		if err := combineCSS(&memCSSLoader{"/a.css", test.sheets}, &buf); !errors.Is(err, test.err) {
+		if err := combineCSS(&memCSSLoader{"/a.css", test.sheets}, &buf, test.minimise); !errors.Is(err, test.err) {
 			t.Errorf("test %d: expecting error %v, got %v", n+1, test.err, err)
 		} else if out := buf.String(); out != test.output {
 			t.Errorf("test %d: expecting output %q, got %q", n+1, test.output, out)
