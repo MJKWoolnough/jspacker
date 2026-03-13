@@ -153,7 +153,7 @@ func (c *Config) processStyle(w io.Writer, html string, tag tag) error {
 func (c *Config) processCSSData(w io.Writer, cs CSSLoader) error {
 	var buf bytes.Buffer
 
-	if err := combineCSS(cs, &buf); err != nil {
+	if err := combineCSS(cs, &buf, c.minimiseCSS); err != nil {
 		return err
 	}
 
