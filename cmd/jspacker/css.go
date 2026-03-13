@@ -45,7 +45,7 @@ type cssImport struct {
 	imports, layer, supports, media []parser.Token
 }
 
-func combineCSS(loader CSSLoader, w *bytes.Buffer) error {
+func combineCSS(loader CSSLoader, w *bytes.Buffer, minimise bool) error {
 	imports, rest, err := processCSS(loader)
 	if err != nil {
 		return err
@@ -53,12 +53,12 @@ func combineCSS(loader CSSLoader, w *bytes.Buffer) error {
 
 	for _, imp := range imports {
 		if imp.imports == nil {
-			printTokens(w, imp.layer)
+			printTokens(w, imp.layer, minimise)
 
 			continue
 		}
 
-		if err := writeCSS(loader, w, imp); err != nil {
+		if err := writeCSS(loader, w, imp, minimise); err != nil {
 			return err
 		}
 	}
@@ -71,18 +71,36 @@ func combineCSS(loader CSSLoader, w *bytes.Buffer) error {
 		}
 	}
 
-	printTokens(w, rest)
+	printTokens(w, rest, minimise)
 
 	return nil
 }
 
-func printTokens(w *bytes.Buffer, tks []parser.Token) {
+func printTokens(w *bytes.Buffer, tks []parser.Token, minimise bool) {
 	for _, tk := range tks {
+		if minimise && tk.Type == css.TokenWhitespace {
+			switch lastByte(w.Bytes()) {
+			case ' ', '\n', '\r', '\f', '\t', '}', '{', '>', ':', ';', ',':
+			default:
+				w.WriteString(" ")
+			}
+
+			continue
+		}
+
+		if minimise && lastByte(w.Bytes()) == ' ' {
+			switch firstByte(tk.Data) {
+			case '+', '-':
+			default:
+				w.Truncate(w.Len() - 1)
+			}
+		}
+
 		w.WriteString(tk.Data)
 	}
 }
 
-func writeCSS(loader CSSLoader, w *bytes.Buffer, imp cssImport) error {
+func writeCSS(loader CSSLoader, w *bytes.Buffer, imp cssImport, minimise bool) error {
 	url := getCSSPath(imp.imports)
 
 	var sections cssSection
@@ -103,13 +121,21 @@ func writeCSS(loader CSSLoader, w *bytes.Buffer, imp cssImport) error {
 		sections.Write(w, "@media ", imp.media)
 	}
 
-	if err := combineCSS(loader.Resolve(url), w); err != nil {
+	if err := combineCSS(loader.Resolve(url), w, minimise); err != nil {
 		return err
 	}
 
 	sections.Close(w)
 
 	return nil
+}
+
+func firstByte(str string) byte {
+	if len(str) == 0 {
+		return 0
+	}
+
+	return str[0]
 }
 
 func lastByte(bytes []byte) byte {

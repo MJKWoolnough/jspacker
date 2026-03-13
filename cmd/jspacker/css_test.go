@@ -697,7 +697,7 @@ func TestCombineCSSOS(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	if err := combineCSS(c, &buf); err != nil {
+	if err := combineCSS(c, &buf, false); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -707,7 +707,7 @@ func TestCombineCSSOS(t *testing.T) {
 
 	c.path = "/b.css"
 
-	if err := combineCSS(c, &buf); !errors.Is(err, fs.ErrNotExist) {
+	if err := combineCSS(c, &buf, false); !errors.Is(err, fs.ErrNotExist) {
 		t.Fatalf("expecting err ErrNotExist, got %v", err)
 	}
 }
