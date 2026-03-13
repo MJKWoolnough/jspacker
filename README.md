@@ -80,6 +80,20 @@ The `jspacker` command accepts the following flags
   -o string     output file (default "-")
   -p            export file as plugin
   -z            gzip compress output
+
+  -P            process input file as HTML, packing JavaScript sources in-place (implies -H with the input file)
+  -b string     base dir
+  -c            embed linked CSS in HTML file
+  -C            minimise embedded CSS
+  -e            keep primary file exports
+  -H string     parse import map from HTML file
+  -i string     input file
+  -M []string   minifier to pass code through, specified as JSON array of command words; e.g ["terser", "-m"]
+  -m {}         import map used to resolve import URLs; can be specified as a JSON file or as individual KEY=VALUE pairs (default {})
+  -n            no exports
+  -o string     output file (default "-")
+  -p            export file as plugin
+  -z            gzip compress output
 ```
 
 ### Command Example
