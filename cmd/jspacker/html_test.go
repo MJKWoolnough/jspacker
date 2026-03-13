@@ -46,11 +46,6 @@ func TestProcessHTMLInput(t *testing.T) {
 		<script type="module">const a_ = {},
 b_ = {};
 
-Object.defineProperty(globalThis, include, {value: (() => {
-		const imports = new Map([["/\x00", a_], ["/a.js", b_]]);
-		return url => (imports.get(url) ?? import(url));
-	})()});
-
 a;
 </script>
 	</head>
@@ -70,11 +65,6 @@ a;
 	<head>
 		<title>Test</title>
 		<script type="module">const a_ = {};
-
-Object.defineProperty(globalThis, include, {value: (() => {
-		const imports = new Map([["/a.js", a_]]);
-		return url => (imports.get(url) ?? import(url));
-	})()});
 
 a;
 </script>
@@ -109,11 +99,6 @@ a;
 		<title>Test</title>
 		
 		<script type="module">const a_ = {};
-
-Object.defineProperty(globalThis, include, {value: (() => {
-		const imports = new Map([["/a.js", a_]]);
-		return url => (imports.get(url) ?? import(url));
-	})()});
 
 a;
 </script>
