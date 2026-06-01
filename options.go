@@ -61,12 +61,20 @@ type loadOpts struct {
 	jsx       *template.Template
 }
 
+// LoadOpt represents an option for the OSLoad Option.
 type LoadOpt func(*loadOpts)
 
+// DisableTS disables Typescript loading in the OSLoad Option.
 func DisableTS(l *loadOpts) {
 	l.disableTS = true
 }
 
+// EnableJSX enables JSX/TSX parsing and processing in the OSLoad Option.
+//
+// The supplied JSX template should follow the rules specified in the jsx
+// package docs:
+//
+//	https://pkg.go.dev/vimagination.zapto.org/javascript/jsx#Process
 func EnableJSX(jsx *template.Template) LoadOpt {
 	return func(l *loadOpts) {
 		l.jsx = jsx
@@ -175,6 +183,13 @@ func loadFns(base, urlPath string, allowTS, allowJSX bool, ts, jsx *bool) iter.S
 }
 
 // OSLoad is the default loader for Package, with the base set to CWD.
+//
+// By default, it will prefer Typescript files over JavaScript files, replacing
+// a '.js' extension, if it exists, or with '.ts', or adding it if it does not.
+// This behaviour can be disabled by providing the DisableTS option.
+//
+// JSX support can be added by providing the EnableJSX support with a valid
+// template.
 func OSLoad(base string, opts ...LoadOpt) func(string) (*javascript.Module, error) {
 	var l loadOpts
 
