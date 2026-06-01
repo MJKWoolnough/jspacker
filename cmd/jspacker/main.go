@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"vimagination.zapto.org/jspacker"
 )
@@ -23,6 +24,7 @@ type Config struct {
 	plugin, noExports, exports, processHTMLFile, processCSS, minimiseCSS, compress bool
 	importMap                                                                      ImportMap
 	minifier                                                                       Minifier
+	jsx                                                                            *template.Template
 }
 
 type Inputs []string
@@ -136,6 +138,8 @@ func run() error {
 }
 
 func parseConfig() (*Config, error) {
+	var jsx string
+
 	config := &Config{importMap: make(ImportMap)}
 
 	flag.Var(&config.filesTodo, "i", "input file")
@@ -151,6 +155,7 @@ func parseConfig() (*Config, error) {
 	flag.StringVar(&config.html, "H", "", "parse import map from HTML file")
 	flag.Var(&config.minifier, "M", "minifier to pass code through, specified as JSON array of command words; e.g [\"terser\", \"-m\"]")
 	flag.BoolVar(&config.compress, "z", false, "gzip compress output")
+	flag.StringVar(&jsx, "x", "", "JSX processing template")
 	flag.Parse()
 
 	if config.plugin && len(config.filesTodo) != 1 {
@@ -165,6 +170,15 @@ func parseConfig() (*Config, error) {
 		if err := config.readImportsFromHTML(); err != nil {
 			return nil, fmt.Errorf("error parsing import map from HTML: %w", err)
 		}
+	}
+
+	if jsx != "" {
+		tmpl, err := template.New("").Parse(jsx)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing JSX template: %w", err)
+		}
+
+		config.jsx = tmpl
 	}
 
 	return config, nil
