@@ -163,7 +163,7 @@ func TestProcessHTMLInput(t *testing.T) {
 
 func TestScriptLoader(t *testing.T) {
 	tmp := t.TempDir()
-	fn := scriptLoader("b;", tmp)
+	fn := scriptLoader("b;", tmp, nil)
 
 	if err := os.WriteFile(filepath.Join(tmp, "a.js"), []byte("a;"), 0600); err != nil {
 		t.Fatalf("unexpected error: %v", err)

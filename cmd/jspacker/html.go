@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"vimagination.zapto.org/javascript"
 	"vimagination.zapto.org/jspacker"
@@ -126,7 +127,7 @@ func (c *Config) processScript(w io.Writer, html string, script tag) error {
 
 	if script.src == "" {
 		c.filesTodo[0] = "/\x00"
-		opts = append(c.Options(), jspacker.Loader(scriptLoader(html[script.contentStart:script.contentEnd], c.base)))
+		opts = append(c.Options(), jspacker.Loader(scriptLoader(html[script.contentStart:script.contentEnd], c.base, c.jsx)))
 	} else {
 		c.filesTodo[0] = c.importMap.Resolve("/", script.src)
 		opts = c.Options()
@@ -340,8 +341,8 @@ type tag struct {
 	src                                        string
 }
 
-func scriptLoader(src, base string) func(string) (*javascript.Module, error) {
-	loader := jspacker.OSLoad(base)
+func scriptLoader(src, base string, jsx *template.Template) func(string) (*javascript.Module, error) {
+	loader := jspacker.OSLoad(base, jsxLoadOpt(jsx)...)
 
 	return func(file string) (*javascript.Module, error) {
 		if file != "/\x00" {

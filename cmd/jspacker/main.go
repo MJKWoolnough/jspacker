@@ -179,6 +179,13 @@ func parseConfig() (*Config, error) {
 		}
 
 		config.jsx = tmpl
+
+		if config.base == "" {
+			config.base, err = os.Getwd()
+			if err != nil {
+				return nil, fmt.Errorf("error getting CWD: %w", err)
+			}
+		}
 	}
 
 	return config, nil
@@ -246,7 +253,7 @@ func (c *Config) Options() []jspacker.Option {
 	}
 
 	if c.base != "" {
-		options = append(options, jspacker.Loader(jspacker.OSLoad(c.base)))
+		options = append(options, jspacker.Loader(jspacker.OSLoad(c.base, jsxLoadOpt(c.jsx)...)))
 	}
 
 	if c.noExports {
@@ -262,6 +269,14 @@ func (c *Config) Options() []jspacker.Option {
 	}
 
 	return options
+}
+
+func jsxLoadOpt(jsx *template.Template) []jspacker.LoadOpt {
+	if jsx == nil {
+		return []jspacker.LoadOpt{}
+	}
+
+	return []jspacker.LoadOpt{jspacker.EnableJSX(jsx)}
 }
 
 func (c *Config) outputFile() (io.WriteCloser, error) {
