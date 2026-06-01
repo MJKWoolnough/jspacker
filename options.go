@@ -7,8 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"text/template"
 
 	"vimagination.zapto.org/javascript"
+	"vimagination.zapto.org/javascript/jsx"
 	"vimagination.zapto.org/parser"
 )
 
@@ -56,6 +58,7 @@ func ResolveURL(fn func(from, to string) string) Option {
 
 type loadOpts struct {
 	disableTS bool
+	jsx       *template.Template
 }
 
 type LoadOpt func(*loadOpts)
@@ -64,14 +67,41 @@ func DisableTS(l *loadOpts) {
 	l.disableTS = true
 }
 
+func EnableJSX(jsx *template.Template) LoadOpt {
+	return func(l *loadOpts) {
+		l.jsx = jsx
+	}
+}
+
 const (
-	jsSuffix = ".js"
-	tsSuffix = ".ts"
+	jsSuffix  = ".js"
+	tsSuffix  = ".ts"
+	jsxSuffix = ".jsx"
+	tsxSuffix = ".tsx"
 )
 
-func loadFns(base, urlPath string, allowTS bool, ts *bool) iter.Seq[func() (*os.File, error)] {
+func loadFns(base, urlPath string, allowTS, allowJSX bool, ts, jsx *bool) iter.Seq[func() (*os.File, error)] {
 	return func(yield func(func() (*os.File, error)) bool) {
 		for _, fn := range [...]func() (*os.File, error){
+			func() (*os.File, error) { // Assume that any TSX file will be more up-to-date by default
+				if allowTS && allowJSX && strings.HasSuffix(urlPath, jsSuffix) {
+					*ts = true
+					*jsx = true
+
+					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath[:len(urlPath)-3]+tsxSuffix)))
+				}
+
+				return nil, nil
+			},
+			func() (*os.File, error) { // Assume that any JSX file will be more up-to-date by default
+				if allowJSX && strings.HasSuffix(urlPath, jsSuffix) {
+					*jsx = true
+
+					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath[:len(urlPath)-3]+jsxSuffix)))
+				}
+
+				return nil, nil
+			},
 			func() (*os.File, error) { // Assume that any TS file will be more up-to-date by default
 				if allowTS && strings.HasSuffix(urlPath, jsSuffix) {
 					*ts = true
@@ -97,6 +127,25 @@ func loadFns(base, urlPath string, allowTS bool, ts *bool) iter.Seq[func() (*os.
 					}
 
 					return f, err
+				}
+
+				return nil, nil
+			},
+			func() (*os.File, error) { // Add TSX extension
+				if allowTS && allowJSX && !strings.HasSuffix(urlPath, tsSuffix) {
+					*ts = true
+					*jsx = true
+
+					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath+tsxSuffix)))
+				}
+
+				return nil, nil
+			},
+			func() (*os.File, error) { // Add JSX extension
+				if allowJSX && !strings.HasSuffix(urlPath, tsSuffix) {
+					*jsx = true
+
+					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath+jsxSuffix)))
 				}
 
 				return nil, nil
@@ -138,9 +187,11 @@ func OSLoad(base string, opts ...LoadOpt) func(string) (*javascript.Module, erro
 			f   *os.File
 			err error
 		)
-		ts := strings.HasSuffix(base, tsSuffix)
+		isTSX := strings.HasSuffix(base, tsxSuffix)
+		isTS := isTSX || strings.HasSuffix(base, tsSuffix)
+		isJSX := isTSX || strings.HasSuffix(base, jsxSuffix)
 
-		for loader := range loadFns(base, urlPath, !l.disableTS, &ts) {
+		for loader := range loadFns(base, urlPath, !l.disableTS, l.jsx != nil, &isTS, &isJSX) {
 			fb, errr := loader()
 			if fb != nil {
 				f = fb
@@ -161,13 +212,23 @@ func OSLoad(base string, opts ...LoadOpt) func(string) (*javascript.Module, erro
 
 		var tks javascript.Tokeniser = &rt
 
-		if ts {
-			tks = javascript.AsTypescript(&rt)
+		if isTS {
+			tks = javascript.AsTypescript(tks)
+		}
+
+		if isJSX {
+			tks = javascript.AsJSX(tks)
 		}
 
 		m, err := javascript.ParseModule(tks)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing file (%s): %w", urlPath, err)
+		}
+
+		if isJSX {
+			if err = jsx.Process(m, l.jsx); err != nil {
+				return nil, fmt.Errorf("error processing file (%s) as JSX: %w", urlPath, err)
+			}
 		}
 
 		return m, nil
