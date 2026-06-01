@@ -54,16 +54,26 @@ func ResolveURL(fn func(from, to string) string) Option {
 	}
 }
 
+type loadOpts struct {
+	disableTS bool
+}
+
+type LoadOpt func(*loadOpts)
+
+func DisableTS(l *loadOpts) {
+	l.disableTS = true
+}
+
 const (
 	jsSuffix = ".js"
 	tsSuffix = ".ts"
 )
 
-func loadFns(base, urlPath string, ts *bool) iter.Seq[func() (*os.File, error)] {
+func loadFns(base, urlPath string, allowTS bool, ts *bool) iter.Seq[func() (*os.File, error)] {
 	return func(yield func(func() (*os.File, error)) bool) {
 		for _, fn := range [...]func() (*os.File, error){
 			func() (*os.File, error) { // Assume that any TS file will be more up-to-date by default
-				if strings.HasSuffix(urlPath, jsSuffix) {
+				if allowTS && strings.HasSuffix(urlPath, jsSuffix) {
 					*ts = true
 
 					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath[:len(urlPath)-3]+tsSuffix)))
@@ -92,7 +102,7 @@ func loadFns(base, urlPath string, ts *bool) iter.Seq[func() (*os.File, error)] 
 				return nil, nil
 			},
 			func() (*os.File, error) { // Add TS extension
-				if !strings.HasSuffix(urlPath, tsSuffix) {
+				if allowTS && !strings.HasSuffix(urlPath, tsSuffix) {
 					*ts = true
 
 					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath+tsSuffix)))
@@ -116,7 +126,13 @@ func loadFns(base, urlPath string, ts *bool) iter.Seq[func() (*os.File, error)] 
 }
 
 // OSLoad is the default loader for Package, with the base set to CWD.
-func OSLoad(base string) func(string) (*javascript.Module, error) {
+func OSLoad(base string, opts ...LoadOpt) func(string) (*javascript.Module, error) {
+	var l loadOpts
+
+	for _, opt := range opts {
+		opt(&l)
+	}
+
 	return func(urlPath string) (*javascript.Module, error) {
 		var (
 			f   *os.File
@@ -124,7 +140,7 @@ func OSLoad(base string) func(string) (*javascript.Module, error) {
 		)
 		ts := strings.HasSuffix(base, tsSuffix)
 
-		for loader := range loadFns(base, urlPath, &ts) {
+		for loader := range loadFns(base, urlPath, !l.disableTS, &ts) {
 			fb, errr := loader()
 			if fb != nil {
 				f = fb
