@@ -103,6 +103,7 @@ func loadFns(base, urlPath string, allowTS, allowJSX bool, ts, jsx *bool) iter.S
 			},
 			func() (*os.File, error) { // Assume that any JSX file will be more up-to-date by default
 				if allowJSX && strings.HasSuffix(urlPath, jsSuffix) {
+					*ts = false
 					*jsx = true
 
 					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath[:len(urlPath)-3]+jsxSuffix)))
@@ -113,6 +114,7 @@ func loadFns(base, urlPath string, allowTS, allowJSX bool, ts, jsx *bool) iter.S
 			func() (*os.File, error) { // Assume that any TS file will be more up-to-date by default
 				if allowTS && strings.HasSuffix(urlPath, jsSuffix) {
 					*ts = true
+					*jsx = false
 
 					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath[:len(urlPath)-3]+tsSuffix)))
 				}
@@ -122,7 +124,8 @@ func loadFns(base, urlPath string, allowTS, allowJSX bool, ts, jsx *bool) iter.S
 			func() (*os.File, error) { // Normal
 				f, err := os.Open(filepath.Join(base, filepath.FromSlash(urlPath)))
 				if err == nil {
-					*ts = strings.HasSuffix(urlPath, tsSuffix)
+					*ts = allowTS && (strings.HasSuffix(urlPath, tsSuffix) || allowJSX && strings.HasSuffix(urlPath, jsxSuffix))
+					*jsx = allowJSX && (strings.HasSuffix(urlPath, jsxSuffix) || allowTS && strings.HasSuffix(urlPath, tsxSuffix))
 				}
 
 				return f, err
@@ -131,7 +134,8 @@ func loadFns(base, urlPath string, allowTS, allowJSX bool, ts, jsx *bool) iter.S
 				if u, err := url.Parse(urlPath); err == nil && u.Path != urlPath {
 					f, err := os.Open(filepath.Join(base, filepath.FromSlash(u.Path)))
 					if err == nil {
-						*ts = strings.HasSuffix(urlPath, tsSuffix)
+						*ts = allowTS && (strings.HasSuffix(urlPath, tsSuffix) || allowJSX && strings.HasSuffix(urlPath, jsxSuffix))
+						*jsx = allowJSX && (strings.HasSuffix(urlPath, jsxSuffix) || allowTS && strings.HasSuffix(urlPath, tsxSuffix))
 					}
 
 					return f, err
@@ -151,6 +155,7 @@ func loadFns(base, urlPath string, allowTS, allowJSX bool, ts, jsx *bool) iter.S
 			},
 			func() (*os.File, error) { // Add JSX extension
 				if allowJSX && !strings.HasSuffix(urlPath, tsSuffix) {
+					*ts = false
 					*jsx = true
 
 					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath+jsxSuffix)))
@@ -161,6 +166,7 @@ func loadFns(base, urlPath string, allowTS, allowJSX bool, ts, jsx *bool) iter.S
 			func() (*os.File, error) { // Add TS extension
 				if allowTS && !strings.HasSuffix(urlPath, tsSuffix) {
 					*ts = true
+					*jsx = false
 
 					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath+tsSuffix)))
 				}
@@ -169,6 +175,9 @@ func loadFns(base, urlPath string, allowTS, allowJSX bool, ts, jsx *bool) iter.S
 			},
 			func() (*os.File, error) { // Add JS extension
 				if !strings.HasSuffix(urlPath, jsSuffix) {
+					*ts = false
+					*jsx = false
+
 					return os.Open(filepath.Join(base, filepath.FromSlash(urlPath+jsSuffix)))
 				}
 
