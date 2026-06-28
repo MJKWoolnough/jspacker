@@ -68,7 +68,7 @@ func (c *Config) outputJS(s *javascript.Module) (err error) {
 	f, err := c.outputFile()
 
 	defer func() {
-		if errr := f.Close(); err == nil {
+		if errr := f.Close(); err == nil && errr != nil {
 			err = fmt.Errorf("error closing output: %w", errr)
 		}
 	}()
